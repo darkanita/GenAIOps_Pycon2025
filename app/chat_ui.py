@@ -26,7 +26,7 @@ from app.rag_pipeline import (
     list_prompt_versions,
     load_vectorstore_from_disk,
 )
-from app.tracking import CHAT_EXPERIMENT, init_tracking, log_user_feedback
+from app.tracking import CHAT_EXPERIMENT, CHAT_TRACING, init_tracking, log_user_feedback
 
 EVAL_DATASET = "tests/eval_dataset.json"
 FALLBACK_EXAMPLES = [
@@ -112,6 +112,9 @@ def _render_sources(sources):
 
 
 def _render_feedback(idx, msg):
+    if not msg.get("trace_id"):
+        st.caption("👍/👎 desactivado: requiere tracing (ENABLE_TRACING=true)")
+        return
     key = f"fb_{idx}"
     if msg.get("feedback") is not None:
         st.session_state.setdefault(key, msg["feedback"])
@@ -175,7 +178,7 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
         st.error(str(e))
         st.stop()
     # Trazas en el experimento del chat, enlazadas a esta versión de la app
-    init_tracking(CHAT_EXPERIMENT, prompt_uri, config["k"])
+    init_tracking(CHAT_EXPERIMENT, prompt_uri, config["k"], tracing=CHAT_TRACING)
     st.sidebar.caption(f"Prompt resuelto: `{prompt_uri.replace('prompts:/', '')}`")
 
     # Preguntas de ejemplo (solo al inicio de la conversación)
@@ -208,7 +211,7 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
             start = time.perf_counter()
             try:
                 result = chain.invoke({"question": question, "chat_history": history})
-                trace_id = mlflow.get_last_active_trace_id(thread_local=True)
+                trace_id = mlflow.get_last_active_trace_id(thread_local=True) if CHAT_TRACING else None
             except Exception as e:
                 st.error(f"Error al consultar el modelo: {e}")
                 st.stop()

@@ -63,7 +63,7 @@ Luego, para evaluar y explorar los resultados:
 
 ```bash
 python app/run_eval.py                  # evaluación con jueces LLM
-mlflow ui --port 5000                   # trazas, prompts, evaluaciones y versiones
+MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false mlflow ui --port 5000 --workers 1   # trazas, prompts, evaluaciones y versiones
 ```
 
 > 🔄 Para entender qué hace MLflow en cada paso y cómo iterar sobre el prompt, ve a [Cómo funciona MLflow en este proyecto](#-cómo-funciona-mlflow-en-este-proyecto).
@@ -91,7 +91,7 @@ python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
 **Haz:**
 ```bash
 python -m app.prompt_registry
-mlflow ui --port 5000        # en otra terminal; abre http://localhost:5000
+MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false mlflow ui --port 5000 --workers 1   # en otra terminal; abre http://localhost:5000
 ```
 **Observa:** la consola muestra `asistente_rrhh v1`, `v2` y `@production → v1`. En MLflow, menú **Prompts** → `asistente_rrhh`: las dos versiones con sus alias.
 **Entiende:** cada archivo de `app/prompts/` es una **versión** del mismo prompt; el alias `@production` dice cuál usa la app.
@@ -246,6 +246,7 @@ Todo se configura en `.env`, sin tocar código:
 | `PROMPT_VERSION` | prompt a usar (ver paso 3) | `prompts:/<PROMPT_NAME>@production` |
 | `RETRIEVER_K` | fragmentos que se envían al LLM en `run_eval.py` | `4` |
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | tamaño y solape de los fragmentos al construir el índice (paso 2) | `512` / `50` |
+| `ENABLE_TRACING` | tracing del chat (necesario para el 👍/👎); la evaluación siempre lo usa | `true` |
 | `MLFLOW_TRACKING_URI` | servidor de MLflow (opcional) | `./mlflow.db` (SQLite) |
 
 Las variables que dejes vacías o comentadas toman su valor por defecto.
@@ -368,7 +369,7 @@ Con `mlflow.langchain.autolog()` cada pregunta genera una **traza** con todos su
 Además, cada combinación **proveedor + modelo + prompt + k** se registra como una **versión de la app** (`LoggedModel`). Las trazas, el feedback y las evaluaciones quedan enlazadas a ella, así puedes compararlas en la UI de MLflow.
 
 ```bash
-mlflow ui --port 5000
+MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false mlflow ui --port 5000 --workers 1
 ```
 
 Ver [Dónde mirar en la UI de MLflow](#-dónde-mirar-en-la-ui-de-mlflow) para saber qué encontrar en cada pantalla.
@@ -504,8 +505,11 @@ El CI (`eval.yml`) repite los pasos 2 y 3 en cada push y bloquea el cambio si no
 ### 🧭 Dónde mirar en la UI de MLflow
 
 ```bash
-mlflow ui --port 5000      # desde la raíz del repo (donde está mlflow.db)
+# desde la raíz del repo (donde está mlflow.db)
+MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false mlflow ui --port 5000 --workers 1
 ```
+
+> 💾 **Memoria:** por defecto `mlflow ui` arranca 4 workers y un sistema de tareas en segundo plano (procesos *huey*) que puede ocupar **más de 3 GB**. Este proyecto no usa esas tareas: con `MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false` y `--workers 1` la UI ocupa unos 500 MB y funciona igual. En Codespaces la variable ya viene configurada en el devcontainer.
 
 En el menú principal están **Experiments** y **Prompts**. Al abrir un experimento aparece una barra lateral con estas pantallas:
 
@@ -555,6 +559,8 @@ En el menú principal están **Experiments** y **Prompts**. Al abrir un experime
 | Muchos `Rate-limited ... retrying` durante `run_eval.py` | Normal con el plan gratuito de Groq: MLflow reintenta solo. Ver [Evaluar con el plan gratuito de Groq](#-evaluar-con-el-plan-gratuito-de-groq). |
 | Jueces con ⚠️ al final de la evaluación | Se agotaron los reintentos o la cuota diaria. Reduce jueces con `EVAL_SCORERS`, baja el ritmo con `MLFLOW_GENAI_EVAL_SCORER_RATE_LIMIT=0.1` o cambia `EVAL_MODEL`. |
 | El dashboard no muestra evaluaciones anteriores | Las versiones previas del repo guardaban en `mlruns/` con otro formato; ahora todo vive en `mlflow.db`. Vuelve a ejecutar `run_eval.py`. |
+| El Codespace se queda sin memoria o se cierra la app | Casi siempre es `mlflow ui` con su configuración por defecto (>3 GB). Ciérralo y ábrelo con `MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false mlflow ui --port 5000 --workers 1` (~500 MB). Revisa el consumo con `free -h`. Si aun así falta memoria, desactiva el tracing del chat con `ENABLE_TRACING=false`, aunque solo ahorra unos 20 MB y se pierde el 👍/👎. |
+| `Stopping...` y la app de Streamlit se detiene | El proceso recibió Ctrl+C. En la terminal de VS Code, Ctrl+C **sin texto seleccionado** interrumpe en lugar de copiar: usa Ctrl+Shift+C para copiar. |
 | `mlflow ui` no muestra nada | Ejecútalo desde la raíz del repo (donde está `mlflow.db`) o usa `mlflow ui --backend-store-uri sqlite:///mlflow.db`. |
 | El prompt editado no cambia en la app | Registra la nueva versión (`python -m app.prompt_registry`) y, si la quieres en producción, promuévela con `--promote N`. La lista de prompts en la app se refresca cada 30 s. |
 | `test.yml` aparece como *skipped* en GitHub | Es esperado: el *quality gate* real corre en `eval.yml`, después de la evaluación. |

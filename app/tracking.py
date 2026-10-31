@@ -10,7 +10,10 @@ Configuración de observabilidad con MLflow 3:
 - Feedback humano: se adjunta a la traza de la respuesta.
 
 Por defecto MLflow guarda todo en ./mlflow.db (SQLite). Para verlo:
-    mlflow ui --port 5000
+    MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false mlflow ui --port 5000 --workers 1
+
+ENABLE_TRACING=false desactiva el tracing del chat (y con él el 👍/👎).
+La evaluación (run_eval.py) siempre usa tracing: los jueces leen las trazas.
 """
 
 import os
@@ -23,6 +26,8 @@ from app.llm_provider import describe
 
 CHAT_EXPERIMENT = "chatbot_rrhh"
 EVAL_EXPERIMENT = "rag_evaluation"
+
+CHAT_TRACING = (os.getenv("ENABLE_TRACING") or "true").strip().lower() not in ("false", "0", "no")
 
 _autolog_enabled = False
 _versions_with_params: set[str] = set()
@@ -71,9 +76,10 @@ def set_app_version(prompt_uri: str, k: int) -> str:
     return active.model_id
 
 
-def init_tracking(experiment: str, prompt_uri: str, k: int) -> str:
+def init_tracking(experiment: str, prompt_uri: str, k: int, tracing: bool = True) -> str:
     mlflow.set_experiment(experiment)
-    enable_tracing()
+    if tracing:
+        enable_tracing()
     return set_app_version(prompt_uri, k)
 
 

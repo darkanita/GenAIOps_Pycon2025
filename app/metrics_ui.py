@@ -182,7 +182,7 @@ def _render_user_feedback():
 
 def render_metrics():
     st.title("📈 Evaluación y monitoreo del chatbot")
-    st.caption("Datos de MLflow. Para explorar trazas, prompts y versiones: `mlflow ui --port 5000`")
+    st.caption("Datos de MLflow. Para explorar trazas, prompts y versiones: `MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false mlflow ui --port 5000 --workers 1`")
 
     experiment = mlflow.get_experiment_by_name(EVAL_EXPERIMENT)
     tab_eval, tab_users = st.tabs(["⚖️ Evaluación automática", "👥 Feedback de usuarios"])

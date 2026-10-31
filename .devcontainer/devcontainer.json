@@ -7,6 +7,9 @@
         }
     },
     "postCreateCommand": "pip install -r requirements.txt",
+    "containerEnv": {
+        "MLFLOW_SERVER_ENABLE_JOB_EXECUTION": "false"
+    },
     "customizations": {
         "vscode": {
             "settings": {},
