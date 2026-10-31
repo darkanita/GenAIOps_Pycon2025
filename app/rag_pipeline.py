@@ -77,12 +77,16 @@ def load_prompt(version="v1_asistente_rrhh"):
         prompt_text = f.read()
     return PromptTemplate(input_variables=["context", "question"], template=prompt_text)
 
-def build_chain(vectordb, prompt_version="v1_asistente_rrhh"):
+def list_prompt_versions(path=PROMPT_DIR):
+    """Versiones de prompt disponibles (nombres de archivo sin .txt)."""
+    return sorted(f[:-4] for f in os.listdir(path) if f.endswith(".txt"))
+
+def build_chain(vectordb, prompt_version="v1_asistente_rrhh", k=4):
     prompt = load_prompt(prompt_version)
-    retriever = vectordb.as_retriever()
+    retriever = vectordb.as_retriever(search_kwargs={"k": k})
     return ConversationalRetrievalChain.from_llm(
         llm=get_llm(temperature=0),
         retriever=retriever,
         combine_docs_chain_kwargs={"prompt": prompt},
-        return_source_documents=False
+        return_source_documents=True  # para mostrar las referencias en la UI
     )

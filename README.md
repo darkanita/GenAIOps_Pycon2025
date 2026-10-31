@@ -18,6 +18,8 @@ El chatbot responde preguntas sobre beneficios, políticas internas y roles de u
 │   ├── main_interface.py         ← interfaz combinada con métricas
 │   ├── run_eval.py               ← evaluación automática
 │   ├── rag_pipeline.py           ← lógica de ingestión y RAG
+│   ├── llm_provider.py           ← selección de proveedor (OpenAI / Groq)
+│   ├── chat_ui.py                ← componente de chat compartido por las UIs
 │   └── prompts/
 │       ├── v1_asistente_rrhh.txt
 │       └── v2_resumido_directo.txt
@@ -124,6 +126,14 @@ Versión combinada con métricas:
 ```bash
 streamlit run app/main_interface.py
 ```
+
+La interfaz de chat incluye:
+- 💡 **Preguntas de ejemplo** (tomadas de `tests/eval_dataset.json`: si cambias de dominio, cambian solas)
+- 📚 **Referencias**: documento, página y fragmento usados para cada respuesta
+- ⚙️ **Panel lateral**: proveedor y modelo activos, selector de versión de prompt y nº de fragmentos (`k`)
+- ⏱️ **Tiempo de respuesta** por mensaje
+- 👍/👎 **Feedback** registrado en MLflow (experimento `chat_feedback`) con pregunta, respuesta, fuentes, latencia y configuración
+- El índice y la cadena se cargan una sola vez (`st.cache_resource`)
 
 ---
 

@@ -3,37 +3,19 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import streamlit as st
-st.set_page_config(page_title="📚 Chatbot GenAI + Métricas", layout="wide")
+st.set_page_config(page_title="Chatbot GenAI + Métricas", page_icon="📚", layout="wide")
 
 import pandas as pd
 import mlflow
 import json
-from app.rag_pipeline import load_vectorstore_from_disk, build_chain
-
+from app.chat_ui import render_chat
 
 
 modo = st.sidebar.radio("Selecciona una vista:", ["🤖 Chatbot", "📊 Métricas"])
-
-vectordb = load_vectorstore_from_disk()
-chain = build_chain(vectordb)
+st.sidebar.divider()
 
 if modo == "🤖 Chatbot":
-    st.title("🤖 Asistente de Recursos Humanos")
-    pregunta = st.text_input("¿Qué deseas consultar?")
-
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-
-    if pregunta:
-        with st.spinner("Consultando documentos..."):
-            result = chain.invoke({"question": pregunta, "chat_history": st.session_state.chat_history})
-            st.session_state.chat_history.append((pregunta, result["answer"]))
-
-    if st.session_state.chat_history:
-        for q, a in reversed(st.session_state.chat_history):
-            st.markdown(f"**👤 Usuario:** {q}")
-            st.markdown(f"**🤖 Bot:** {a}")
-            st.markdown("---")
+    render_chat()
 
 elif modo == "📊 Métricas":
     st.title("📈 Resultados de Evaluación")
