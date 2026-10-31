@@ -209,6 +209,7 @@ pytest tests/test_run_eval.py -v
 ├── .github/workflows/
 │   ├── eval.yml
 │   └── test.yml
+├── DESAFIO.md                    ← desafío para estudiantes
 ├── vectorstore/                  ← (generado) índices FAISS por proveedor de embeddings
 └── mlflow.db                     ← (generado) base de datos de MLflow: prompts, trazas, evaluaciones
 ```
@@ -241,7 +242,8 @@ Todo se configura en `.env`, sin tocar código:
 | `EMBEDDINGS_MODEL` | modelo de embeddings | `text-embedding-ada-002` / `paraphrase-multilingual-MiniLM-L12-v2` |
 | `EVAL_MODEL` | juez de `run_eval.py`, formato `proveedor:/modelo` | `openai:/gpt-4o-mini` / `groq:/openai/gpt-oss-20b` |
 | `EVAL_SCORERS` | ejecutar solo algunos jueces, separados por coma | todos |
-| `PROMPT_VERSION` | prompt a usar (ver paso 3) | `prompts:/asistente_rrhh@production` |
+| `PROMPT_NAME` | nombre del prompt en el registro | `asistente_rrhh` |
+| `PROMPT_VERSION` | prompt a usar (ver paso 3) | `prompts:/<PROMPT_NAME>@production` |
 | `RETRIEVER_K` | fragmentos que se envían al LLM en `run_eval.py` | `4` |
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | tamaño y solape de los fragmentos al construir el índice (paso 2) | `512` / `50` |
 | `MLFLOW_TRACKING_URI` | servidor de MLflow (opcional) | `./mlflow.db` (SQLite) |
@@ -430,6 +432,7 @@ streamlit run app/dashboard.py
 - CI de evaluación: `.github/workflows/eval.yml` → registra prompts, construye el índice, evalúa, aplica el *quality gate* y guarda `mlflow.db` como artefacto
   - Secrets: `OPENAI_API_KEY` y/o `GROQ_API_KEY`
   - Variables opcionales: `LLM_PROVIDER`, `EVAL_MODEL`, `PROMPT_VERSION` (Settings → Secrets and variables → Actions)
+  - ⚠️ En el CI `mlflow.db` empieza vacío, así que las promociones hechas en tu máquina no existen allí y `@production` apunta a la v1. Para evaluar otro prompt en el CI, define `PROMPT_VERSION` con el alias de su archivo (p. ej. `prompts:/asistente_rrhh@v2_resumido_directo`).
 - Test unitarios: `.github/workflows/test.yml`
 
 ---
@@ -560,52 +563,19 @@ En el menú principal están **Experiments** y **Prompts**. Al abrir un experime
 
 ## 🎓 Desafío para estudiantes
 
-🧩 Parte 1: Personalización
+El desafío completo está en **[DESAFIO.md](DESAFIO.md)**: llevar el chatbot a un dominio propio y demostrar, con evidencia de MLflow, que la versión en producción es la mejor.
 
-1. Elige un nuevo dominio
-Ejemplos: salud, educación, legal, bancario, etc.
+| Parte | Qué se hace |
+|---|---|
+| 1. Dominio | Cambiar documentos, prompts, textos y guías a un dominio nuevo |
+| 2. Dataset | Al menos 15 preguntas: directas, multi-documento, sin respuesta y adversarias |
+| 3. Experimentos | Comparar prompts, `k` y chunking; diagnosticar fallos con trazas |
+| 4. Evaluadores | Un `@scorer` de código, un juez `make_judge` y `Guidelines` del dominio |
+| 5. Confianza en el juez | Etiquetar respuestas a mano y medir el acuerdo juez–humano |
+| 6. Producción | Promover, ajustar el quality gate y demostrar que el CI bloquea un prompt peor |
+| 7. Informe | Conclusiones con evidencia, incluyendo costo en latencia y tokens |
 
-2. Reemplaza los documentos PDF
-Ubícalos en data/pdfs/.
-
-3. Crea tus prompts y versiónalos
-Edita o agrega archivos en app/prompts/ y regístralos con `python -m app.prompt_registry`.
-
-4. Crea un conjunto de pruebas
-En tests/eval_dataset.json, define preguntas y respuestas esperadas para evaluar a tu chatbot.
-
-✅ Parte 2: Evaluación Automática
-
-1. Ejecuta `run_eval.py` con al menos dos versiones de prompt y dos valores de `k`.
-2. Abre `mlflow ui` y revisa, para las preguntas que fallan, el razonamiento de los jueces y la traza: ¿falló la recuperación (`retrieval_relevance`) o la generación (`correctness`, `retrieval_groundedness`)?
-
-🔧 Parte 3: ¡Tu reto! (👨‍🔬 nivel investigador)
-
-1. Agrega tus propios evaluadores en `get_scorers()` de `app/run_eval.py`:
-
-    * Un **scorer de código** con `@scorer`, por ejemplo: ¿la respuesta menciona el documento fuente? ¿supera cierta longitud?
-    * Un **juez LLM personalizado** con `mlflow.genai.judges.make_judge`, por ejemplo "claridad" o "empatía", con su propia rúbrica.
-    * Al menos un criterio nuevo con `Guidelines` propio de tu dominio (p. ej. "no da diagnósticos médicos").
-
-    📚 Revisa la documentación de [scorers personalizados](https://mlflow.org/docs/latest/genai/eval-monitor/scorers/custom/) y [jueces con make_judge](https://mlflow.org/docs/latest/genai/eval-monitor/scorers/llm-judge/make-judge).
-
-2. Compara dos modelos juez (por ejemplo OpenAI vs Groq con `EVAL_MODEL`). ¿Coinciden sus veredictos?
-
-📊 Parte 4: Mejora el dashboard
-
-1. Extiende `app/metrics_ui.py` para visualizar tus nuevos evaluadores.
-2. Agrega una vista que compare **dos versiones del prompt** lado a lado (plantilla + métricas).
-3. (Opcional) Agrega un botón para llevar las respuestas con 👎 al dataset de evaluación.
-
-🧪 Parte 5: Presenta y reflexiona
-1. Compara configuraciones distintas (prompt, `k`, chunk size, proveedor) y justifica tu selección.
-    * ¿Cuál configuración genera mejores respuestas? ¿Cuánto cuesta en latencia?
-    * ¿En qué fallan los modelos? ¿Alucinan, recuperan mal o no siguen las guías?
-    * Promueve tu mejor versión a `@production` y explica por qué. Usa evidencias de MLflow.
-
-🚀 Bonus
-
-- Prueba la optimización automática de prompts con `mlflow.genai.optimize_prompts` y compara el prompt optimizado contra el tuyo.
+Incluye entregables, una rúbrica sugerida y consejos para el plan gratuito de Groq.
 
 ---
 
