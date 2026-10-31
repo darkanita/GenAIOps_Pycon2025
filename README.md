@@ -8,6 +8,55 @@ Este proyecto demuestra cómo construir, evaluar y automatizar un chatbot de tip
 
 El chatbot responde preguntas sobre beneficios, políticas internas y roles de una empresa ficticia (**Contoso Electronics**), usando como base una colección de documentos PDF internos.
 
+### ✨ Qué incluye
+
+| Capacidad | Cómo se implementa |
+|---|---|
+| RAG sobre PDFs | LangChain + FAISS, con referencias (documento y página) en cada respuesta |
+| Proveedor configurable | **OpenAI** o **Groq** para el LLM; embeddings de OpenAI o locales con FastEmbed |
+| Versionamiento de prompts | **MLflow Prompt Registry** con alias (`@production`) |
+| Observabilidad | **MLflow Tracing**: cada respuesta es una traza con todos sus pasos |
+| Evaluación | `mlflow.genai.evaluate` con **jueces LLM** (corrección, alucinación, relevancia, seguridad, guías propias) |
+| Feedback humano | 👍/👎 en la app, guardado sobre la traza de cada respuesta |
+| Comparación de versiones | Cada combinación proveedor + modelo + prompt + `k` es una versión de la app en MLflow |
+| CI/CD | GitHub Actions evalúa y aplica un *quality gate* en cada cambio |
+
+### 🗺️ Cómo encajan las piezas
+
+```mermaid
+flowchart LR
+    PDF[📄 PDFs] -->|"chunks + embeddings"| IDX[(FAISS)]
+    TXT[📝 app/prompts/*.txt] -->|"prompt_registry"| PR[(MLflow<br/>Prompt Registry)]
+    IDX --> RAG[🧠 Cadena RAG]
+    PR -->|"@production"| RAG
+    LLM[🤖 OpenAI / Groq] --> RAG
+    RAG --> UI[💬 Streamlit]
+    RAG --> EV[⚖️ run_eval.py<br/>jueces LLM]
+    UI -->|"trazas + 👍/👎"| ML[(MLflow<br/>mlflow.db)]
+    EV -->|"métricas + razonamientos"| ML
+    ML --> DASH[📈 Dashboard / mlflow ui]
+    EV --> CI[🔁 GitHub Actions<br/>quality gate]
+```
+
+### ⚡ Inicio rápido
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env                    # pon tu OPENAI_API_KEY, o LLM_PROVIDER=groq + GROQ_API_KEY
+python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"   # índice
+python -m app.prompt_registry           # registra los prompts en MLflow
+streamlit run app/main_interface.py     # chatbot + métricas
+```
+
+Luego, para evaluar y explorar los resultados:
+
+```bash
+python app/run_eval.py                  # evaluación con jueces LLM
+mlflow ui --port 5000                   # trazas, prompts, evaluaciones y versiones
+```
+
+> 💻 **GitHub Codespaces**: abre el repo en **Code → Codespaces → Create codespace**. Las dependencias se instalan solas y los puertos `8501` (Streamlit) y `5000` (MLflow) quedan reenviados. Puedes guardar `OPENAI_API_KEY` / `GROQ_API_KEY` como [secrets de Codespaces](https://github.com/settings/codespaces) en lugar de usar `.env`.
+
 ---
 
 ## 📂 Estructura del Proyecto
@@ -38,6 +87,8 @@ El chatbot responde preguntas sobre beneficios, políticas internas y roles de u
 ├── .github/workflows/
 │   ├── eval.yml
 │   └── test.yml
+├── vectorstore/                  ← (generado) índices FAISS por proveedor de embeddings
+└── mlflow.db                     ← (generado) base de datos de MLflow: prompts, trazas, evaluaciones
 ```
 
 ---
@@ -57,15 +108,22 @@ cp .env.example .env  # Agrega tu API KEY de OpenAI o de Groq
 
 #### 🔀 Elegir proveedor: OpenAI o Groq
 
-El proveedor se elige en `.env`, sin tocar código (ver `app/llm_provider.py`):
+Todo se configura en `.env`, sin tocar código:
 
-| Variable | Valores | Default |
+| Variable | Para qué sirve | Default |
 |---|---|---|
-| `LLM_PROVIDER` | `openai` \| `groq` | `openai` |
-| `LLM_MODEL` | cualquier modelo del proveedor | `gpt-4o` / `openai/gpt-oss-120b` |
-| `EVAL_MODEL` | modelo juez para `run_eval.py` | igual a `LLM_MODEL` |
-| `EMBEDDINGS_PROVIDER` | `openai` \| `fastembed` | `openai` con OpenAI, `fastembed` con Groq |
+| `LLM_PROVIDER` | proveedor del LLM: `openai` \| `groq` | `openai` |
+| `LLM_MODEL` | modelo de chat | `gpt-4o` (OpenAI) / `openai/gpt-oss-120b` (Groq) |
+| `OPENAI_API_KEY` / `GROQ_API_KEY` | key del proveedor que uses | — |
+| `EMBEDDINGS_PROVIDER` | `openai` \| `fastembed` (local) | `openai` con OpenAI, `fastembed` con Groq |
 | `EMBEDDINGS_MODEL` | modelo de embeddings | `text-embedding-ada-002` / `paraphrase-multilingual-MiniLM-L12-v2` |
+| `EVAL_MODEL` | juez de `run_eval.py`, formato `proveedor:/modelo` | `openai:/gpt-4o-mini` / `groq:/openai/gpt-oss-120b` |
+| `PROMPT_VERSION` | prompt a usar (ver paso 3) | `prompts:/asistente_rrhh@production` |
+| `RETRIEVER_K` | fragmentos que se envían al LLM en `run_eval.py` | `4` |
+| `CHUNK_SIZE` / `CHUNK_OVERLAP` | tamaño y solape de los fragmentos al construir el índice (paso 2) | `512` / `50` |
+| `MLFLOW_TRACKING_URI` | servidor de MLflow (opcional) | `./mlflow.db` (SQLite) |
+
+Las variables que dejes vacías o comentadas toman su valor por defecto.
 
 **Usar Groq** (obtén tu key en [console.groq.com](https://console.groq.com/keys)):
 
@@ -89,15 +147,16 @@ python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
 ```
 
 Esto:
-- Divide los documentos en chunks (por defecto `chunk_size=512`, `chunk_overlap=50`)
+- Divide los documentos en chunks (`CHUNK_SIZE` y `CHUNK_OVERLAP` del `.env`; por defecto 512 y 50)
 - Genera embeddings con OpenAI o FastEmbed (según `EMBEDDINGS_PROVIDER`)
 - Guarda el índice vectorial en `vectorstore/openai/` o `vectorstore/fastembed/`
 - Registra los parámetros en **MLflow**
 
-🔧 Para personalizar:
+🔧 Para probar otro chunking, cambia `CHUNK_SIZE`/`CHUNK_OVERLAP` en `.env` y vuelve a construir el índice (también puedes pasarlos directamente):
 ```python
 save_vectorstore(chunk_size=1024, chunk_overlap=100)
 ```
+> Si cambias el chunking, mantén los mismos valores en `.env` al correr `run_eval.py` para que la evaluación registre la configuración correcta.
 
 ♻️ Para reutilizarlo directamente:
 ```python
@@ -273,6 +332,20 @@ pytest tests/test_run_eval.py -v
 - **MLflow 3** – Prompt Registry, Tracing, evaluación con jueces LLM, feedback y versiones de la app
 - **GitHub Actions** – CI/CD
 - **DevContainer** – Desarrollo portable
+
+---
+
+## 🛠️ Solución de problemas
+
+| Síntoma | Causa / solución |
+|---|---|
+| `No existe el índice en 'vectorstore/...'` | Falta construir el índice, o cambiaste `EMBEDDINGS_PROVIDER`: ejecuta el paso 2. |
+| La primera consulta con Groq tarda mucho | FastEmbed descarga el modelo de embeddings (~220 MB) la primera vez. |
+| `run_eval.py` muestra jueces con ⚠️ o errores 429 | Límite de llamadas del proveedor (cada evaluación hace ~50 llamadas al juez). Usa un juez más liviano, p. ej. `EVAL_MODEL=groq:/openai/gpt-oss-20b`, o espera y reintenta. |
+| El dashboard no muestra evaluaciones anteriores | Las versiones previas del repo guardaban en `mlruns/` con otro formato; ahora todo vive en `mlflow.db`. Vuelve a ejecutar `run_eval.py`. |
+| `mlflow ui` no muestra nada | Ejecútalo desde la raíz del repo (donde está `mlflow.db`) o usa `mlflow ui --backend-store-uri sqlite:///mlflow.db`. |
+| El prompt editado no cambia en la app | Registra la nueva versión (`python -m app.prompt_registry`) y, si la quieres en producción, promuévela con `--promote N`. La lista de prompts en la app se refresca cada 30 s. |
+| `test.yml` aparece como *skipped* en GitHub | Es esperado: el *quality gate* real corre en `eval.yml`, después de la evaluación. |
 
 ---
 

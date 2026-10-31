@@ -38,9 +38,9 @@ load_dotenv()
 
 # Configuración
 PROMPT_VERSION = os.getenv("PROMPT_VERSION") or DEFAULT_PROMPT
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 512))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 50))
-K = int(os.getenv("RETRIEVER_K", 4))
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE") or 512)        # deben coincidir con el índice construido
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP") or 50)
+K = int(os.getenv("RETRIEVER_K") or 4)
 DATASET_PATH = "tests/eval_dataset.json"
 
 
