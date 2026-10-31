@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -7,7 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV OPENAI_API_KEY=${OPENAI_API_KEY}
+# Las API keys y LLM_PROVIDER se pasan en tiempo de ejecución:
+#   docker run --env-file .env -p 8501:8501 <imagen>
 EXPOSE 8501
 
 CMD ["streamlit", "run", "app/main_interface.py"]

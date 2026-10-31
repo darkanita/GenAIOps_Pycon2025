@@ -19,15 +19,52 @@ jobs:
     - name: Configurar Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.10
+        python-version: '3.10'
 
     - name: Instalar dependencias
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Ejecutar evaluación
+    - name: Verificar credenciales
       env:
+        LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'openai' }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       run: |
+        echo "Proveedor: $LLM_PROVIDER"
+        if [ "$LLM_PROVIDER" = "groq" ]; then
+          KEY="$GROQ_API_KEY"; NAME="GROQ_API_KEY"; URL="https://api.groq.com/openai/v1/models"
+        else
+          KEY="$OPENAI_API_KEY"; NAME="OPENAI_API_KEY"; URL="https://api.openai.com/v1/models"
+        fi
+        if [ -z "$KEY" ]; then
+          echo "::error::Falta el secret $NAME (Settings → Secrets and variables → Actions). Para usar Groq crea también la variable LLM_PROVIDER=groq."; exit 1
+        fi
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $KEY" "$URL")
+        if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+          echo "::error::El secret $NAME no es válido (HTTP $STATUS): la key fue revocada, venció o se copió mal. Genera una nueva y actualiza el secret."; exit 1
+        fi
+        echo "Credenciales OK ($NAME, HTTP $STATUS)"
+
+    - name: Ejecutar evaluación (jueces LLM de MLflow)
+      env:
+        LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'openai' }}
+        EVAL_MODEL: ${{ vars.EVAL_MODEL }}
+        PROMPT_VERSION: ${{ vars.PROMPT_VERSION }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      run: |
+        python -m app.prompt_registry
+        python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
         python app/run_eval.py
+
+    - name: Quality gate (umbrales mínimos)
+      run: pytest tests/test_run_eval.py -v
+
+    - name: Guardar resultados de MLflow
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlflow-db
+        path: mlflow.db

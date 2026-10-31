@@ -1,22 +1,32 @@
 [
     {
-        "question": "\u00bfQu\u00e9 cubre el plan de beneficios Northwind Health Plus?",
-        "answer": "El plan Northwind Health Plus cubre atenci\u00f3n m\u00e9dica, dental, de la vista, medicamentos recetados y servicios de salud mental."
+        "question": "¿Qué cubre el plan de beneficios Northwind Health Plus?",
+        "answer": "Northwind Health Plus cubre servicios médicos, de visión y dentales; medicamentos recetados (genéricos, de marca y especializados); salud mental y abuso de sustancias; atención preventiva; y servicios de emergencia, tanto dentro como fuera de la red.",
+        "type": "directa",
+        "source": "Benefit_Options.pdf, p. 3"
     },
     {
-        "question": "\u00bfCu\u00e1l es el procedimiento para tomar una licencia por maternidad?",
-        "answer": "Debes notificar a Recursos Humanos al menos 30 d\u00edas antes de la fecha esperada y presentar la documentaci\u00f3n m\u00e9dica correspondiente."
+        "question": "¿Qué incluye el programa PerksPlus?",
+        "answer": "PerksPlus permite reembolsar hasta 1000 dólares en actividades de bienestar físico, como membresías de gimnasio, entrenamiento personal, clases de yoga o pilates, equipo deportivo y clases grupales. No cubre gastos no relacionados con actividad física, tratamientos médicos, ni comida o suplementos.",
+        "type": "directa",
+        "source": "PerksPlus.pdf, pp. 3-4"
     },
     {
-        "question": "\u00bfQu\u00e9 incluye el programa PerksPlus?",
-        "answer": "PerksPlus incluye descuentos en gimnasios, membres\u00edas de bienestar, vales de alimentos y soporte financiero."
+        "question": "¿Qué no cubre el plan Northwind Standard en comparación con Northwind Health Plus?",
+        "answer": "A diferencia de Northwind Health Plus, Northwind Standard no cubre servicios de emergencia, salud mental y abuso de sustancias, ni servicios fuera de la red; además, en medicamentos solo cubre genéricos y de marca, no los especializados.",
+        "type": "multi-documento",
+        "source": "Benefit_Options.pdf, p. 3"
     },
     {
-        "question": "\u00bfQu\u00e9 responsabilidades tiene un analista de datos seg\u00fan el role library?",
-        "answer": "Seg\u00fan el Role Library, un analista de datos debe recolectar, limpiar y analizar datos para generar reportes estrat\u00e9gicos para el negocio."
+        "question": "¿Cuál es el procedimiento para tomar una licencia por maternidad?",
+        "answer": "Los documentos no contienen información sobre el procedimiento para solicitar una licencia por maternidad, por lo que el asistente debe indicar que no tiene información suficiente para responder.",
+        "type": "sin respuesta",
+        "source": "No aparece en ningún documento"
     },
     {
-        "question": "\u00bfCu\u00e1les son los beneficios est\u00e1ndar de Northwind?",
-        "answer": "Los beneficios est\u00e1ndar incluyen seguro m\u00e9dico b\u00e1sico, vacaciones pagadas, y plan de retiro 401(k)."
+        "question": "¿Qué responsabilidades tiene un analista de datos según el role library?",
+        "answer": "El role library no incluye el rol de analista de datos, por lo que el asistente debe indicar que no tiene información sobre ese rol.",
+        "type": "sin respuesta",
+        "source": "role_library.pdf no contiene ese rol"
     }
 ]
