@@ -34,7 +34,7 @@ DEFAULT_EMBEDDINGS_MODELS = {
 
 
 def get_llm_provider() -> str:
-    provider = os.getenv("LLM_PROVIDER", "openai").strip().lower()
+    provider = (os.getenv("LLM_PROVIDER") or "openai").strip().lower()
     if provider not in DEFAULT_LLM_MODELS:
         raise ValueError(
             f"LLM_PROVIDER no soportado: '{provider}'. Usa uno de: {list(DEFAULT_LLM_MODELS)}"
@@ -44,7 +44,7 @@ def get_llm_provider() -> str:
 
 def get_embeddings_provider() -> str:
     default = "openai" if get_llm_provider() == "openai" else "fastembed"
-    provider = os.getenv("EMBEDDINGS_PROVIDER", default).strip().lower()
+    provider = (os.getenv("EMBEDDINGS_PROVIDER") or default).strip().lower()
     if provider not in DEFAULT_EMBEDDINGS_MODELS:
         raise ValueError(
             f"EMBEDDINGS_PROVIDER no soportado: '{provider}'. "
