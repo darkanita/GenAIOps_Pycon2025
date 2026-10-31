@@ -33,13 +33,19 @@ jobs:
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       run: |
         echo "Proveedor: $LLM_PROVIDER"
-        if [ "$LLM_PROVIDER" = "groq" ] && [ -z "$GROQ_API_KEY" ]; then
-          echo "::error::Falta el secret GROQ_API_KEY (Settings → Secrets and variables → Actions → Secrets)"; exit 1
+        if [ "$LLM_PROVIDER" = "groq" ]; then
+          KEY="$GROQ_API_KEY"; NAME="GROQ_API_KEY"; URL="https://api.groq.com/openai/v1/models"
+        else
+          KEY="$OPENAI_API_KEY"; NAME="OPENAI_API_KEY"; URL="https://api.openai.com/v1/models"
         fi
-        if [ "$LLM_PROVIDER" = "openai" ] && [ -z "$OPENAI_API_KEY" ]; then
-          echo "::error::Falta el secret OPENAI_API_KEY. Si usas Groq, crea la variable LLM_PROVIDER=groq y el secret GROQ_API_KEY (Settings → Secrets and variables → Actions)"; exit 1
+        if [ -z "$KEY" ]; then
+          echo "::error::Falta el secret $NAME (Settings → Secrets and variables → Actions). Para usar Groq crea también la variable LLM_PROVIDER=groq."; exit 1
         fi
-        echo "Credenciales OK"
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $KEY" "$URL")
+        if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+          echo "::error::El secret $NAME no es válido (HTTP $STATUS): la key fue revocada, venció o se copió mal. Genera una nueva y actualiza el secret."; exit 1
+        fi
+        echo "Credenciales OK ($NAME, HTTP $STATUS)"
 
     - name: Ejecutar evaluación (jueces LLM de MLflow)
       env:
