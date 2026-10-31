@@ -20,7 +20,10 @@ El chatbot responde preguntas sobre beneficios, políticas internas y roles de u
 │   ├── rag_pipeline.py           ← lógica de ingestión y RAG
 │   ├── llm_provider.py           ← selección de proveedor (OpenAI / Groq)
 │   ├── chat_ui.py                ← componente de chat compartido por las UIs
-│   └── prompts/
+│   ├── metrics_ui.py             ← vista de métricas (evaluación + feedback)
+│   ├── prompt_registry.py        ← versionamiento de prompts en MLflow
+│   ├── tracking.py               ← tracing, versión de la app y feedback en MLflow
+│   └── prompts/                  ← fuente de las versiones del prompt
 │       ├── v1_asistente_rrhh.txt
 │       └── v2_resumido_directo.txt
 ├── data/pdfs/                    ← documentos fuente
@@ -103,19 +106,53 @@ vectordb = load_vectorstore_from_disk()
 
 ---
 
-### 3. 🧠 Construcción del pipeline RAG
+### 3. 📝 Versionamiento de prompts (MLflow Prompt Registry)
 
-```python
-from app.rag_pipeline import build_chain
-chain = build_chain(vectordb, prompt_version="v1_asistente_rrhh")
+Los archivos de `app/prompts/` se registran como **versiones** del prompt `asistente_rrhh` en MLflow:
+
+```bash
+python -m app.prompt_registry
+# 📝 v1_asistente_rrhh.txt → asistente_rrhh v1 (@v1_asistente_rrhh)
+# 📝 v2_resumido_directo.txt → asistente_rrhh v2 (@v2_resumido_directo)
+# 🚀 @production → v1
 ```
 
-- Soporta múltiples versiones de prompt
-- Usa `ConversationalRetrievalChain` con `LangChain` + `OpenAI` o `Groq` (según `LLM_PROVIDER`)
+- Cada versión guarda su plantilla, un mensaje de commit y la etiqueta `source_file`.
+- Si editas un archivo y vuelves a ejecutar el comando, se crea una **versión nueva** (solo si el contenido cambió).
+- El alias `@production` indica qué versión usa la app. Para promover otra versión **sin tocar código**:
+
+```bash
+python -m app.prompt_registry --promote 2
+```
+
+La app referencia el prompt con una URI (variable `PROMPT_VERSION` en `.env`):
+
+| URI | Significado |
+|---|---|
+| `prompts:/asistente_rrhh@production` | la versión que tenga el alias (default) |
+| `prompts:/asistente_rrhh/2` | una versión fija |
+| `prompts:/asistente_rrhh@latest` | la última versión registrada |
+| `v1_asistente_rrhh` | archivo local, sin usar el registro |
+
+> La primera vez que se carga un prompt del registro, si aún no existe, se registra automáticamente.
+
+En la UI de MLflow (`mlflow ui`) → pestaña **Prompts** puedes ver las versiones, compararlas (diff) y mover alias.
 
 ---
 
-### 4. 💬 Interacción vía Streamlit
+### 4. 🧠 Construcción del pipeline RAG
+
+```python
+from app.rag_pipeline import build_chain
+chain = build_chain(vectordb, prompt_version="prompts:/asistente_rrhh@production", k=4)
+```
+
+- Usa `ConversationalRetrievalChain` con `LangChain` + `OpenAI` o `Groq` (según `LLM_PROVIDER`)
+- Devuelve también los documentos fuente (`source_documents`) para mostrar referencias
+
+---
+
+### 5. 💬 Interacción vía Streamlit
 
 Versión básica:
 ```bash
@@ -130,67 +167,99 @@ streamlit run app/main_interface.py
 La interfaz de chat incluye:
 - 💡 **Preguntas de ejemplo** (tomadas de `tests/eval_dataset.json`: si cambias de dominio, cambian solas)
 - 📚 **Referencias**: documento, página y fragmento usados para cada respuesta
-- ⚙️ **Panel lateral**: proveedor y modelo activos, selector de versión de prompt y nº de fragmentos (`k`)
+- ⚙️ **Panel lateral**: proveedor y modelo activos, selector de prompt del **Prompt Registry** y nº de fragmentos (`k`)
+- 🔭 **Tracing**: cada respuesta queda como una traza en MLflow (experimento `chatbot_rrhh`)
+- 👍/👎 **Feedback humano** adjunto a la traza de la respuesta (`mlflow.log_feedback`)
 - ⏱️ **Tiempo de respuesta** por mensaje
-- 👍/👎 **Feedback** registrado en MLflow (experimento `chat_feedback`) con pregunta, respuesta, fuentes, latencia y configuración
-- El índice y la cadena se cargan una sola vez (`st.cache_resource`)
 
 ---
 
-### 5. 🧪 Evaluación automática de calidad
+### 6. 🔭 Observabilidad con MLflow Tracing
 
-Ejecuta:
+Con `mlflow.langchain.autolog()` cada pregunta genera una **traza** con todos sus pasos: reformulación de la pregunta, fragmentos recuperados por el retriever, prompt final, respuesta del LLM, tokens y latencias.
+
+Además, cada combinación **proveedor + modelo + prompt + k** se registra como una **versión de la app** (`LoggedModel`). Las trazas, el feedback y las evaluaciones quedan enlazadas a ella, así puedes compararlas en la UI de MLflow.
+
+```bash
+mlflow ui --port 5000
+```
+
+- **Experiments → chatbot_rrhh → Traces**: conversaciones reales con su feedback
+- **Experiments → rag_evaluation**: evaluaciones con el razonamiento de cada juez
+- **Models / Agent versions**: versiones de la app y sus métricas
+- **Prompts**: versiones y alias del prompt
+
+> MLflow guarda todo en `./mlflow.db` (SQLite). Para usar un servidor: `MLFLOW_TRACKING_URI=http://...`
+
+---
+
+### 7. ⚖️ Evaluación automática con jueces LLM
 
 ```bash
 python app/run_eval.py
+
+# Comparar otra configuración
+PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo RETRIEVER_K=6 python app/run_eval.py
 ```
 
-Esto:
-- Usa `tests/eval_dataset.json` como ground truth
-- Genera respuestas usando el RAG actual
-- Evalúa con `LangChain Eval (QAEvalChain)`
-- Registra resultados en **MLflow**, incluyendo `llm_provider`, `llm_model` y `embeddings_*`, para comparar proveedores
+Usa `mlflow.genai.evaluate` con `tests/eval_dataset.json` como ground truth y estos **jueces** (LLM-as-a-judge):
+
+| Juez | Qué evalúa |
+|---|---|
+| `Correctness` | ¿La respuesta coincide con la respuesta esperada? |
+| `RelevanceToQuery` | ¿Responde a lo que se preguntó? |
+| `RetrievalGroundedness` | ¿Está sustentada en los documentos recuperados? (detecta alucinaciones) |
+| `RetrievalRelevance` | ¿Los fragmentos recuperados son pertinentes? |
+| `Safety` | ¿Contiene contenido dañino u ofensivo? |
+| `Guidelines` `idioma_espanol` | ¿Está escrita en español? |
+| `Guidelines` `tono_profesional` | ¿Tono formal y sin inventar políticas? |
+
+- Cada juez deja un **veredicto y su razonamiento** en la traza de cada pregunta.
+- Las métricas agregadas (`correctness/mean`, `safety/mean`, …) quedan en un run del experimento `rag_evaluation`, enlazado a la versión de la app y del prompt.
+- El juez se configura con `EVAL_MODEL` (default: `openai:/gpt-4o-mini` o `groq:/openai/gpt-oss-120b`).
 
 ---
 
-### 6. 📈 Visualización de resultados
-
-Dashboard completo:
+### 8. 📈 Visualización de resultados
 
 ```bash
 streamlit run app/dashboard.py
 ```
 
-- Tabla con todas las preguntas evaluadas
-- Gráficos de precisión por configuración (`prompt + chunk_size`)
-- Filtrado por experimento MLflow
+- **Comparación de configuraciones**: promedio de cada juez por evaluación, con gráfico seleccionable
+- **Detalle por pregunta**: veredicto (✅/❌) de cada juez y su razonamiento
+- **Feedback de usuarios**: satisfacción por versión de la app y respuestas con 👎 (candidatas para ampliar el dataset de evaluación)
 
 ---
 
-### 7. 🔁 Automatización con GitHub Actions
+### 9. 🔁 Automatización con GitHub Actions
 
-- CI de evaluación: `.github/workflows/eval.yml`
-  - Para usar Groq en CI: crea el secret `GROQ_API_KEY` y la variable de repositorio `LLM_PROVIDER=groq` (Settings → Secrets and variables → Actions)
+- CI de evaluación: `.github/workflows/eval.yml` → registra prompts, construye el índice, evalúa, aplica el *quality gate* y guarda `mlflow.db` como artefacto
+  - Secrets: `OPENAI_API_KEY` y/o `GROQ_API_KEY`
+  - Variables opcionales: `LLM_PROVIDER`, `EVAL_MODEL`, `PROMPT_VERSION` (Settings → Secrets and variables → Actions)
 - Test unitarios: `.github/workflows/test.yml`
 
 ---
 
-### 8. 🧪 Validación automatizada
+### 10. 🧪 Validación automatizada (quality gate)
 
 ```bash
-pytest tests/test_run_eval.py
+pytest tests/test_run_eval.py -v
 ```
 
-- Evalúa que el sistema tenga al menos 80% de precisión con el dataset base
+- Verifica que la última evaluación supere los umbrales: `correctness ≥ 0.8` y `safety = 1.0`
+- Ajustables con `MIN_CORRECTNESS` y `MIN_SAFETY`
 
 ---
 
 ## 🔍 ¿Qué puedes hacer?
 
-- 💬 Hacer preguntas al chatbot
-- 🔁 Evaluar diferentes estrategias de chunking y prompts
-- 📊 Comparar desempeño con métricas semánticas
-- 🧪 Trazar todo en MLflow
+- 💬 Hacer preguntas al chatbot y ver de dónde sale cada respuesta
+- 📝 Versionar prompts y promoverlos con alias
+- 🔁 Evaluar diferentes prompts, proveedores, `k` y estrategias de chunking
+- ⚖️ Calificar con jueces LLM y revisar su razonamiento
+- 🔭 Inspeccionar cada paso del RAG con trazas
+- 👥 Recoger feedback humano y llevarlo al dataset de evaluación
 - 🔄 Adaptar a otros dominios (legal, salud, educación…)
 
 ---
@@ -201,8 +270,7 @@ pytest tests/test_run_eval.py
 - **FastEmbed** – Embeddings locales (cuando se usa Groq)
 - **FAISS** – Vectorstore
 - **Streamlit** – UI
-- **MLflow** – Registro de experimentos
-- **LangChain Eval** – Evaluación semántica
+- **MLflow 3** – Prompt Registry, Tracing, evaluación con jueces LLM, feedback y versiones de la app
 - **GitHub Actions** – CI/CD
 - **DevContainer** – Desarrollo portable
 
@@ -218,54 +286,44 @@ Ejemplos: salud, educación, legal, bancario, etc.
 2. Reemplaza los documentos PDF
 Ubícalos en data/pdfs/.
 
-3. Modifica o crea tus prompts
-Edita los archivos en app/prompts/.
+3. Crea tus prompts y versiónalos
+Edita o agrega archivos en app/prompts/ y regístralos con `python -m app.prompt_registry`.
 
 4. Crea un conjunto de pruebas
 En tests/eval_dataset.json, define preguntas y respuestas esperadas para evaluar a tu chatbot.
 
 ✅ Parte 2: Evaluación Automática
 
-1. Ejecuta run_eval.py para probar tu sistema actual.
-Actualmente, la evaluación está basada en QAEvalChain de LangChain, que devuelve una métrica binaria: correcto / incorrecto.
+1. Ejecuta `run_eval.py` con al menos dos versiones de prompt y dos valores de `k`.
+2. Abre `mlflow ui` y revisa, para las preguntas que fallan, el razonamiento de los jueces y la traza: ¿falló la recuperación (`retrieval_relevance`) o la generación (`correctness`, `retrieval_groundedness`)?
 
 🔧 Parte 3: ¡Tu reto! (👨‍🔬 nivel investigador)
 
-1. Mejora el sistema de evaluación:
+1. Agrega tus propios evaluadores en `get_scorers()` de `app/run_eval.py`:
 
-    * Agrega evaluación con LabeledCriteriaEvalChain usando al menos los siguientes criterios:
+    * Un **scorer de código** con `@scorer`, por ejemplo: ¿la respuesta menciona el documento fuente? ¿supera cierta longitud?
+    * Un **juez LLM personalizado** con `mlflow.genai.judges.make_judge`, por ejemplo "claridad" o "empatía", con su propia rúbrica.
+    * Al menos un criterio nuevo con `Guidelines` propio de tu dominio (p. ej. "no da diagnósticos médicos").
 
-        * "correctness" – ¿Es correcta la respuesta?
-        * "relevance" – ¿Es relevante respecto a la pregunta?
-        * "coherence" – ¿Está bien estructurada la respuesta?
-        * "toxicity" – ¿Contiene lenguaje ofensivo o riesgoso?
-        * "harmfulness" – ¿Podría causar daño la información?
+    📚 Revisa la documentación de [scorers personalizados](https://mlflow.org/docs/latest/genai/eval-monitor/scorers/custom/) y [jueces con make_judge](https://mlflow.org/docs/latest/genai/eval-monitor/scorers/llm-judge/make-judge).
 
-    * Cada criterio debe registrar:
-
-        * Una métrica en MLflow (score)
-
-    * Y opcionalmente, un razonamiento como artefacto (reasoning)
-
-    📚 Revisa la [documentación de LabeledCriteriaEvalChain](https://python.langchain.com/api_reference/langchain/evaluation/langchain.evaluation.criteria.eval_chain.LabeledCriteriaEvalChain.html) para implementarlo.
+2. Compara dos modelos juez (por ejemplo OpenAI vs Groq con `EVAL_MODEL`). ¿Coinciden sus veredictos?
 
 📊 Parte 4: Mejora el dashboard
 
-1. Extiende dashboard.py o main_interface.py para visualizar:
-
-    * Las métricas por criterio (correctness_score, toxicity_score, etc.).
-    * Una opción para seleccionar y comparar diferentes criterios en gráficos.
-    * (Opcional) Razonamientos del modelo como texto.    
+1. Extiende `app/metrics_ui.py` para visualizar tus nuevos evaluadores.
+2. Agrega una vista que compare **dos versiones del prompt** lado a lado (plantilla + métricas).
+3. (Opcional) Agrega un botón para llevar las respuestas con 👎 al dataset de evaluación.
 
 🧪 Parte 5: Presenta y reflexiona
-1. Compara configuraciones distintas (chunk size, prompt) y justifica tu selección.
-    * ¿Cuál configuración genera mejores respuestas?
-    * ¿En qué fallan los modelos? ¿Fueron tóxicos o incoherentes?
-    * Usa evidencias desde MLflow y capturas del dashboard.
+1. Compara configuraciones distintas (prompt, `k`, chunk size, proveedor) y justifica tu selección.
+    * ¿Cuál configuración genera mejores respuestas? ¿Cuánto cuesta en latencia?
+    * ¿En qué fallan los modelos? ¿Alucinan, recuperan mal o no siguen las guías?
+    * Promueve tu mejor versión a `@production` y explica por qué. Usa evidencias de MLflow.
 
 🚀 Bonus
 
-- ¿Te animas a crear un nuevo criterio como "claridad" o "creatividad"? Puedes definirlo tú mismo y usarlo con LabeledCriteriaEvalChain.
+- Prueba la optimización automática de prompts con `mlflow.genai.optimize_prompts` y compara el prompt optimizado contra el tuyo.
 
 ---
 

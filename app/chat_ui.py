@@ -5,9 +5,10 @@ Componente de chat reutilizable para ui_streamlit.py y main_interface.py.
 Incluye:
 - Preguntas de ejemplo (tomadas de tests/eval_dataset.json)
 - Referencias: documento, página y fragmento usado para responder
-- Panel lateral con proveedor/modelo, versión de prompt y nº de fragmentos (k)
+- Panel lateral con proveedor/modelo, versión de prompt (Prompt Registry) y nº de fragmentos (k)
 - Caché del vectorstore y de la cadena (no se recargan en cada interacción)
-- Feedback 👍/👎 registrado en MLflow (experimento "chat_feedback")
+- Tracing con MLflow: cada respuesta es una traza enlazada a la versión de la app
+- Feedback 👍/👎 adjunto a la traza de la respuesta (mlflow.log_feedback)
 - Tiempo de respuesta
 """
 
@@ -19,14 +20,15 @@ import mlflow
 import streamlit as st
 
 from app.llm_provider import describe
+from app.prompt_registry import DEFAULT_PROMPT
 from app.rag_pipeline import (
     build_chain,
     list_prompt_versions,
     load_vectorstore_from_disk,
 )
+from app.tracking import CHAT_EXPERIMENT, init_tracking, log_user_feedback
 
 EVAL_DATASET = "tests/eval_dataset.json"
-FEEDBACK_EXPERIMENT = "chat_feedback"
 FALLBACK_EXAMPLES = [
     "¿Qué beneficios de salud ofrece la empresa?",
     "¿Qué incluye el programa PerksPlus?",
@@ -43,7 +45,14 @@ def get_vectordb():
 
 @st.cache_resource(show_spinner="Preparando el asistente...")
 def get_chain(prompt_version: str, k: int):
-    return build_chain(get_vectordb(), prompt_version=prompt_version, k=k)
+    chain = build_chain(get_vectordb(), prompt_version=prompt_version, k=k)
+    prompt_uri = chain.combine_docs_chain.llm_chain.prompt.metadata["prompt_uri"]
+    return chain, prompt_uri
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def get_prompt_options():
+    return list_prompt_versions()
 
 
 @st.cache_data
@@ -73,20 +82,12 @@ def _format_sources(source_documents):
     return [{"document": n, "page": p, "snippet": t} for (n, p), t in refs.items()]
 
 
-def _log_feedback(msg, rating):
+def _log_feedback(msg, thumbs_up: bool):
+    if not msg.get("trace_id"):
+        st.warning("Esta respuesta no tiene traza asociada; no se pudo registrar el feedback.")
+        return False
     try:
-        mlflow.set_experiment(FEEDBACK_EXPERIMENT)
-        with mlflow.start_run(run_name="feedback"):
-            mlflow.log_params({
-                "question": msg["question"][:500],
-                "prompt_version": msg["prompt_version"],
-                "k": msg["k"],
-                **describe(),
-            })
-            mlflow.log_metric("thumbs_up", 1 if rating == "up" else 0)
-            mlflow.log_metric("latency_s", msg["latency"])
-            mlflow.log_text(msg["answer"], "answer.txt")
-            mlflow.log_dict({"sources": msg["sources"]}, "sources.json")
+        log_user_feedback(msg["trace_id"], thumbs_up)
         return True
     except Exception as e:  # el feedback nunca debe tumbar la app
         st.warning(f"No se pudo registrar el feedback en MLflow: {e}")
@@ -105,20 +106,17 @@ def _render_sources(sources):
 
 
 def _render_feedback(idx, msg):
-    if msg.get("feedback"):
-        st.caption("✅ Gracias por tu feedback" if msg["feedback"] == "up"
-                   else "📝 Gracias, lo usaremos para mejorar")
-        return
-    c1, c2, _ = st.columns([1, 1, 10])
-    for col, rating, icon in ((c1, "up", "👍"), (c2, "down", "👎")):
-        col.button(icon, key=f"fb_{rating}_{idx}", help="Útil" if rating == "up" else "No útil",
-                   on_click=_on_feedback, args=(idx, rating))
+    key = f"fb_{idx}"
+    if msg.get("feedback") is not None:
+        st.session_state.setdefault(key, msg["feedback"])
+    st.feedback("thumbs", key=key, on_change=_on_feedback, args=(idx,))
 
 
-def _on_feedback(idx, rating):
+def _on_feedback(idx):
+    value = st.session_state.get(f"fb_{idx}")  # 1 = 👍, 0 = 👎
     msg = st.session_state.messages[idx]
-    if _log_feedback(msg, rating):
-        msg["feedback"] = rating
+    if value is not None and value != msg.get("feedback") and _log_feedback(msg, bool(value)):
+        msg["feedback"] = value
 
 
 def _new_conversation():
@@ -135,16 +133,19 @@ def render_sidebar():
         f"**Embeddings:** `{info['embeddings_provider']}` · `{info['embeddings_model'].split('/')[-1]}`"
     )
 
-    versions = list_prompt_versions()
-    default = os.getenv("PROMPT_VERSION", "v1_asistente_rrhh")
+    options = get_prompt_options()
+    default = os.getenv("PROMPT_VERSION") or DEFAULT_PROMPT
+    if default not in options:
+        options = [default, *options]
     prompt_version = st.sidebar.selectbox(
-        "Versión de prompt", versions,
-        index=versions.index(default) if default in versions else 0,
+        "Prompt (MLflow Prompt Registry)", options, index=options.index(default),
+        format_func=lambda o: o.replace("prompts:/", ""),
+        help="@alias o versión fija. Registra cambios con `python -m app.prompt_registry`",
     )
     k = st.sidebar.slider("Fragmentos a recuperar (k)", 1, 10, 4,
                           help="Cuántos fragmentos de los PDFs se envían al LLM como contexto")
 
-    st.sidebar.button("🗑️ Nueva conversación", use_container_width=True,
+    st.sidebar.button("🗑️ Nueva conversación", width="stretch",
                       on_click=_new_conversation)
 
     return {"prompt_version": prompt_version, "k": k}
@@ -163,10 +164,13 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
         st.session_state.messages = []
 
     try:
-        chain = get_chain(config["prompt_version"], config["k"])
+        chain, prompt_uri = get_chain(config["prompt_version"], config["k"])
     except FileNotFoundError as e:
         st.error(str(e))
         st.stop()
+    # Trazas en el experimento del chat, enlazadas a esta versión de la app
+    init_tracking(CHAT_EXPERIMENT, prompt_uri, config["k"])
+    st.sidebar.caption(f"Prompt resuelto: `{prompt_uri.replace('prompts:/', '')}`")
 
     # Preguntas de ejemplo (solo al inicio de la conversación)
     pending = None
@@ -176,7 +180,7 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
             st.markdown("##### 💡 Prueba con alguna de estas preguntas")
             cols = st.columns(2)
             for i, q in enumerate(get_example_questions()):
-                if cols[i % 2].button(q, key=f"ex_{i}", use_container_width=True):
+                if cols[i % 2].button(q, key=f"ex_{i}", width="stretch"):
                     pending = q
 
     # Historial
@@ -198,6 +202,7 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
             start = time.perf_counter()
             try:
                 result = chain.invoke({"question": question, "chat_history": history})
+                trace_id = mlflow.get_last_active_trace_id(thread_local=True)
             except Exception as e:
                 st.error(f"Error al consultar el modelo: {e}")
                 st.stop()
@@ -208,8 +213,9 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
             "answer": result["answer"],
             "sources": _format_sources(result.get("source_documents")),
             "latency": latency,
-            "prompt_version": config["prompt_version"],
+            "prompt_version": prompt_uri.replace("prompts:/", ""),
             "k": config["k"],
+            "trace_id": trace_id,
         }
         st.session_state.messages.append(msg)
         _render_answer(len(st.session_state.messages) - 1, msg)

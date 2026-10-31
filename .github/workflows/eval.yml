@@ -26,11 +26,24 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Ejecutar evaluación
+    - name: Ejecutar evaluación (jueces LLM de MLflow)
       env:
         LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'openai' }}
+        EVAL_MODEL: ${{ vars.EVAL_MODEL }}
+        PROMPT_VERSION: ${{ vars.PROMPT_VERSION }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       run: |
+        python -m app.prompt_registry
         python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
         python app/run_eval.py
+
+    - name: Quality gate (umbrales mínimos)
+      run: pytest tests/test_run_eval.py -v
+
+    - name: Guardar resultados de MLflow
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlflow-db
+        path: mlflow.db

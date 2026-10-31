@@ -6,7 +6,8 @@ mediante variables de entorno, sin tocar el resto del código.
 Variables de entorno:
     LLM_PROVIDER          openai | groq                  (default: openai)
     LLM_MODEL             modelo de chat a usar          (default según proveedor)
-    EVAL_MODEL            modelo para el evaluador       (default: LLM_MODEL)
+    EVAL_MODEL            juez de run_eval.py, formato proveedor:/modelo
+                          (default: openai:/gpt-4o-mini o groq:/openai/gpt-oss-120b)
     EMBEDDINGS_PROVIDER   openai | fastembed             (default: openai si LLM_PROVIDER=openai,
                                                                    fastembed si LLM_PROVIDER=groq)
     EMBEDDINGS_MODEL      modelo de embeddings           (default según proveedor)
@@ -24,6 +25,13 @@ load_dotenv()
 DEFAULT_LLM_MODELS = {
     "openai": "gpt-4o",
     "groq": "openai/gpt-oss-120b",
+}
+
+# Jueces (LLM-as-a-judge) de mlflow.genai.evaluate. Formato "<proveedor>:/<modelo>";
+# los proveedores distintos de OpenAI/Anthropic se resuelven vía LiteLLM.
+DEFAULT_JUDGE_MODELS = {
+    "openai": "openai:/gpt-4o-mini",
+    "groq": "groq:/openai/gpt-oss-120b",
 }
 
 DEFAULT_EMBEDDINGS_MODELS = {
@@ -77,9 +85,16 @@ def get_llm(temperature: float = 0, model: str | None = None):
         return ChatGroq(model=model, temperature=temperature)
 
 
-def get_eval_llm(temperature: float = 0):
-    """LLM usado como juez en la evaluación (puede ser distinto al del chatbot)."""
-    return get_llm(temperature=temperature, model=os.getenv("EVAL_MODEL") or None)
+def get_judge_model_uri() -> str:
+    """
+    Modelo juez para mlflow.genai.evaluate. EVAL_MODEL acepta "proveedor:/modelo"
+    o solo el nombre del modelo (se usa el proveedor de LLM_PROVIDER).
+    """
+    provider = get_llm_provider()
+    model = os.getenv("EVAL_MODEL")
+    if not model:
+        return DEFAULT_JUDGE_MODELS[provider]
+    return model if ":/" in model else f"{provider}:/{model}"
 
 
 def get_embeddings():
