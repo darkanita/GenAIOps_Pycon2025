@@ -13,6 +13,7 @@ Por defecto MLflow guarda todo en ./mlflow.db (SQLite). Para verlo:
     mlflow ui --port 5000
 """
 
+import os
 import re
 
 import mlflow
@@ -39,12 +40,21 @@ def app_config(prompt_uri: str, k: int) -> dict:
     return {**describe(), "prompt": prompt_uri, "k": str(k)}
 
 
+def _prompt_label(prompt_uri: str) -> str:
+    """prompts:/asistente_rrhh/2 → asistente_rrhh-v2 ; app/prompts/v1_x.txt → local-v1_x"""
+    if prompt_uri.startswith("prompts:/"):
+        return prompt_uri.replace("prompts:/", "").replace("/", "-v")
+    return "local-" + os.path.splitext(os.path.basename(prompt_uri))[0]
+
+
 def app_version_name(prompt_uri: str, k: int) -> str:
-    """Nombre legible y estable para la versión de la app."""
+    """
+    Nombre legible y estable para la versión de la app.
+    MLflow no permite '/', ':', '.', '%', comillas en el nombre: se reemplazan por '-'.
+    """
     cfg = describe()
-    prompt = prompt_uri.replace("prompts:/", "").replace("/", "_v")
-    raw = f"rag-{cfg['llm_provider']}-{cfg['llm_model']}-{prompt}-k{k}"
-    return re.sub(r"[^A-Za-z0-9_.@-]", "-", raw)
+    raw = f"rag-{cfg['llm_provider']}-{cfg['llm_model']}-{_prompt_label(prompt_uri)}-k{k}"
+    return re.sub(r"[^A-Za-z0-9_-]+", "-", raw)
 
 
 def set_app_version(prompt_uri: str, k: int) -> str:
