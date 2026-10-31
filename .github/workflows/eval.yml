@@ -26,6 +26,21 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Verificar credenciales
+      env:
+        LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'openai' }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      run: |
+        echo "Proveedor: $LLM_PROVIDER"
+        if [ "$LLM_PROVIDER" = "groq" ] && [ -z "$GROQ_API_KEY" ]; then
+          echo "::error::Falta el secret GROQ_API_KEY (Settings → Secrets and variables → Actions → Secrets)"; exit 1
+        fi
+        if [ "$LLM_PROVIDER" = "openai" ] && [ -z "$OPENAI_API_KEY" ]; then
+          echo "::error::Falta el secret OPENAI_API_KEY. Si usas Groq, crea la variable LLM_PROVIDER=groq y el secret GROQ_API_KEY (Settings → Secrets and variables → Actions)"; exit 1
+        fi
+        echo "Credenciales OK"
+
     - name: Ejecutar evaluación (jueces LLM de MLflow)
       env:
         LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'openai' }}
