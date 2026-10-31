@@ -44,6 +44,7 @@ DEFAULT_EMBEDDINGS_MODELS = {
 
 
 def get_llm_provider() -> str:
+    """Proveedor del LLM según LLM_PROVIDER ("openai" por defecto)."""
     provider = (os.getenv("LLM_PROVIDER") or "openai").strip().lower()
     if provider not in DEFAULT_LLM_MODELS:
         raise ValueError(
@@ -53,6 +54,7 @@ def get_llm_provider() -> str:
 
 
 def get_embeddings_provider() -> str:
+    """Proveedor de embeddings: EMBEDDINGS_PROVIDER, o el que corresponde al LLM (Groq → fastembed)."""
     default = "openai" if get_llm_provider() == "openai" else "fastembed"
     provider = (os.getenv("EMBEDDINGS_PROVIDER") or default).strip().lower()
     if provider not in DEFAULT_EMBEDDINGS_MODELS:
@@ -64,10 +66,12 @@ def get_embeddings_provider() -> str:
 
 
 def get_llm_model_name() -> str:
+    """Modelo de chat: LLM_MODEL o el default del proveedor."""
     return os.getenv("LLM_MODEL") or DEFAULT_LLM_MODELS[get_llm_provider()]
 
 
 def get_embeddings_model_name() -> str:
+    """Modelo de embeddings: EMBEDDINGS_MODEL o el default del proveedor."""
     return os.getenv("EMBEDDINGS_MODEL") or DEFAULT_EMBEDDINGS_MODELS[get_embeddings_provider()]
 
 

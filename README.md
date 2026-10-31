@@ -28,7 +28,7 @@ El chatbot responde preguntas sobre beneficios, políticas internas y roles de u
 | Versionamiento de prompts | **MLflow Prompt Registry** con alias (`@production`) |
 | Observabilidad | **MLflow Tracing**: cada respuesta es una traza con todos sus pasos |
 | Evaluación | `mlflow.genai.evaluate` con **jueces LLM** (corrección, alucinación, relevancia, seguridad, guías propias) |
-| Feedback humano | 👍/👎 en la app, guardado sobre la traza de cada respuesta |
+| Feedback humano | 👍/👎 en la app (el 👎 pide un comentario), guardado sobre la traza de cada respuesta |
 | Comparación de versiones | Cada combinación proveedor + modelo + prompt + `k` es una versión de la app en MLflow |
 | CI/CD | GitHub Actions evalúa y aplica un *quality gate* en cada cambio |
 
@@ -102,14 +102,14 @@ MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false mlflow ui --port 5000 --workers 1   # e
 ```bash
 streamlit run app/main_interface.py
 ```
-Haz clic en una pregunta de ejemplo, abre **📚 Referencias** y califica la respuesta con 👍 o 👎.
+Haz clic en una pregunta de ejemplo, abre **📚 Referencias** y califica la respuesta con 👍 o 👎 (con 👎 se abre un campo para explicar qué estuvo mal).
 **Observa:** la respuesta, los documentos y páginas usados, el tiempo de respuesta y, en la barra lateral, el proveedor, el modelo y el **Prompt resuelto** (`asistente_rrhh/1`).
 **Entiende:** es un RAG: busca los fragmentos más parecidos a la pregunta y se los entrega al LLM junto con el prompt.
 **Lee:** `app/chat_ui.py` → `render_chat()` y `app/rag_pipeline.py` → `build_chain()`.
 
 ### Paso 4 · Inspeccionar la traza de esa respuesta
 **Haz:** en MLflow → **Experiments** → `chatbot_rrhh` → **Traces** → abre la traza más reciente.
-**Observa:** el árbol de pasos (*spans*): reformulación de la pregunta, el **retriever** con los fragmentos que encontró, el prompt final enviado al LLM y su respuesta, con tokens y latencia. En *Assessments* está tu 👍/👎 como `user_feedback`.
+**Observa:** el árbol de pasos (*spans*): reformulación de la pregunta, el **retriever** con los fragmentos que encontró, el prompt final enviado al LLM y su respuesta, con tokens y latencia. En *Assessments* está tu 👍/👎 como `user_feedback` (`true`/`false`) y, si diste 👎 con comentario, el texto aparece como su razonamiento (*rationale*).
 **Entiende:** el **tracing** permite saber *por qué* el bot respondió lo que respondió. Si la respuesta es mala, la traza muestra si falló la búsqueda o el LLM.
 **Lee:** `app/tracking.py`.
 
@@ -172,7 +172,7 @@ pytest tests/test_run_eval.py -v
 | 2 | `app/rag_pipeline.py` | Indexación de PDFs y construcción de la cadena RAG |
 | 3 | `app/prompt_registry.py` | Registro, alias y carga de prompts en MLflow |
 | 4 | `app/tracking.py` | Tracing, versiones de la app y feedback |
-| 5 | `app/chat_ui.py` | La interfaz de chat y cómo usa todo lo anterior |
+| 5 | `app/chat_ui.py` | La interfaz de chat y cómo usa todo lo anterior (el flujo de una pregunta está resumido al inicio del archivo) |
 | 6 | `app/run_eval.py` | Evaluación con jueces LLM |
 | 7 | `app/metrics_ui.py` | Cómo se leen los resultados de MLflow para el dashboard |
 | 8 | `tests/test_run_eval.py` y `.github/workflows/eval.yml` | Quality gate y CI |
@@ -357,7 +357,7 @@ La interfaz de chat incluye:
 - 📚 **Referencias**: documento, página y fragmento usados para cada respuesta
 - ⚙️ **Panel lateral**: proveedor y modelo activos, selector de prompt del **Prompt Registry** y nº de fragmentos (`k`)
 - 🔭 **Tracing**: cada respuesta queda como una traza en MLflow (experimento `chatbot_rrhh`)
-- 👍/👎 **Feedback humano** adjunto a la traza de la respuesta (`mlflow.log_feedback`)
+- 👍/👎 **Feedback humano** adjunto a la traza de la respuesta (`mlflow.log_feedback`). El 👍 se registra de inmediato; el 👎 abre un formulario para comentar qué estuvo mal (se puede enviar sin comentario). En el dashboard, las respuestas con 👎 aparecen con su comentario.
 - ⏱️ **Tiempo de respuesta** por mensaje
 
 ---
@@ -498,7 +498,7 @@ flowchart LR
 | 4. Comparar | `streamlit run app/dashboard.py` o `mlflow ui` | Ves la v3 junto a las versiones anteriores |
 | 5. Promover | `python -m app.prompt_registry --promote 3` | El alias `@production` apunta a v3; la app la usa sin cambiar código (se refresca en ~30 s) |
 | 6. Monitorear | Usuarios usan el chat | Trazas en `chatbot_rrhh` enlazadas a la versión de la app, con su 👍/👎 |
-| 7. Ampliar el dataset | Revisa las respuestas con 👎 en el dashboard y agrégalas a `tests/eval_dataset.json` | La siguiente evaluación cubre esos casos |
+| 7. Ampliar el dataset | Revisa las respuestas con 👎 y sus comentarios en el dashboard, y agrégalas a `tests/eval_dataset.json` | La siguiente evaluación cubre esos casos |
 
 El CI (`eval.yml`) repite los pasos 2 y 3 en cada push y bloquea el cambio si no supera el *quality gate*.
 

@@ -42,6 +42,7 @@ def enable_tracing():
 
 
 def app_config(prompt_uri: str, k: int) -> dict:
+    """Parámetros que definen una versión de la app (se guardan en MLflow)."""
     return {**describe(), "prompt": prompt_uri, "k": str(k)}
 
 
@@ -77,6 +78,10 @@ def set_app_version(prompt_uri: str, k: int) -> str:
 
 
 def init_tracking(experiment: str, prompt_uri: str, k: int, tracing: bool = True) -> str:
+    """
+    Prepara MLflow antes de responder: elige el experimento, activa el tracing
+    (si tracing=True) y marca la versión activa de la app. Devuelve el model_id.
+    """
     mlflow.set_experiment(experiment)
     if tracing:
         enable_tracing()

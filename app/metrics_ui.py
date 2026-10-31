@@ -1,11 +1,19 @@
 # app/metrics_ui.py
 """
 Vista de métricas compartida por dashboard.py y main_interface.py.
+Solo LEE datos de MLflow; no escribe nada.
 
-1. Comparación de configuraciones: un run por evaluación (mlflow.genai.evaluate)
-   con las métricas agregadas de cada juez.
-2. Detalle por pregunta: trazas del run con el veredicto y razonamiento de cada juez.
-3. Feedback de usuarios: 👍/👎 registrados sobre las trazas del chatbot.
+Pestaña "⚖️ Evaluación automática" (experimento rag_evaluation)
+  1. Comparación de configuraciones: un run por cada `python app/run_eval.py`,
+     con el promedio de cada juez (métricas "<juez>/mean").
+  2. Detalle por pregunta: las trazas de un run, con el veredicto y el
+     razonamiento que cada juez dejó como "assessment".
+
+Pestaña "👥 Feedback de usuarios" (experimento chatbot_rrhh)
+  3. Los 👍/👎 (y comentarios) que los usuarios dejaron en las trazas del chat,
+     agrupados por versión de la app.
+
+Los jueces nuevos que agregues en run_eval.py aparecen aquí automáticamente.
 """
 
 import json
@@ -16,7 +24,9 @@ import streamlit as st
 
 from app.tracking import CHAT_EXPERIMENT, EVAL_EXPERIMENT
 
+# Parámetros del run que identifican una configuración (columnas de la tabla)
 CONFIG_PARAMS = ["llm_provider", "llm_model", "prompt", "k", "chunk_size", "embeddings_provider", "judge_model"]
+# Assessments que son respuestas esperadas del dataset, no veredictos de jueces
 EXPECTATION_NAMES = {"expected_response", "expected_facts", "guidelines"}
 
 
@@ -38,6 +48,7 @@ def _to_score(value):
 
 
 def _question(request):
+    """Extrae el texto de la pregunta de la entrada de una traza (dict o JSON)."""
     if isinstance(request, str):
         try:
             request = json.loads(request)
@@ -49,6 +60,7 @@ def _question(request):
 
 
 def _answer(response):
+    """Extrae el texto de la respuesta de la salida de una traza (dict o JSON)."""
     if isinstance(response, str):
         try:
             response = json.loads(response)
@@ -60,6 +72,7 @@ def _answer(response):
 
 
 def _feedback_items(trace):
+    """Veredictos (de jueces o de usuarios) adjuntos a una traza, sin las expectativas."""
     for a in trace.info.assessments or []:
         if a.name in EXPECTATION_NAMES or getattr(a, "feedback", None) is None:
             continue
@@ -69,6 +82,7 @@ def _feedback_items(trace):
 # ---------- Secciones ----------
 
 def _render_comparison(experiment):
+    """Tabla y gráfico con el promedio de cada juez por evaluación. Devuelve la tabla."""
     runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id],
                               order_by=["start_time DESC"])
     if runs.empty:
@@ -101,6 +115,7 @@ def _render_comparison(experiment):
 
 
 def _render_question_detail(table, experiment):
+    """Para la evaluación elegida: ✅/❌ de cada juez por pregunta y sus razonamientos."""
     st.subheader("🔎 Detalle por pregunta")
     options = {f"{r['configuración']} · {r['start_time']:%Y-%m-%d %H:%M}": r["run_id"]
                for _, r in table.iterrows()}
@@ -136,6 +151,7 @@ def _render_question_detail(table, experiment):
 
 
 def _render_user_feedback():
+    """Satisfacción por versión de la app y lista de respuestas con 👎 y su comentario."""
     st.subheader("👥 Feedback de usuarios")
     exp = mlflow.get_experiment_by_name(CHAT_EXPERIMENT)
     if exp is None:
@@ -181,6 +197,7 @@ def _render_user_feedback():
 
 
 def render_metrics():
+    """Dibuja la página de métricas con sus dos pestañas."""
     st.title("📈 Evaluación y monitoreo del chatbot")
     st.caption("Datos de MLflow. Para explorar trazas, prompts y versiones: `MLFLOW_SERVER_ENABLE_JOB_EXECUTION=false mlflow ui --port 5000 --workers 1`")
 

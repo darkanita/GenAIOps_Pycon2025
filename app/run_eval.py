@@ -104,6 +104,13 @@ def get_scorers(judge_model: str):
 
 
 def main():
+    """
+    1. Arma la cadena RAG con el prompt y k configurados.
+    2. Marca la versión de la app en MLflow y activa el tracing.
+    3. Ejecuta mlflow.genai.evaluate: por cada pregunta del dataset llama a
+       predict_fn (genera una traza) y luego cada juez califica esa traza.
+    4. Imprime el promedio de cada juez. El detalle queda en MLflow.
+    """
     vectordb = load_vectorstore_from_disk()
     chain = build_chain(vectordb, prompt_version=PROMPT_VERSION, k=K)
     prompt_uri = chain.combine_docs_chain.llm_chain.prompt.metadata["prompt_uri"]
@@ -119,6 +126,7 @@ def main():
         print("🐢 Modo pausado para respetar los límites del proveedor (puede tardar varios minutos)")
 
     def predict_fn(question: str) -> str:
+        """Lo que MLflow llama por cada fila del dataset: recibe inputs["question"]."""
         result = chain.invoke({"question": question, "chat_history": []})
         return result["answer"]
 

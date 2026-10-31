@@ -37,10 +37,12 @@ def _to_mlflow_template(text: str) -> str:
 
 
 def _local_files(path=PROMPT_DIR):
+    """Archivos .txt de app/prompts/, en orden alfabético (v1, v2, ...)."""
     return sorted(f for f in os.listdir(path) if f.endswith(".txt"))
 
 
 def _existing_versions(name=PROMPT_NAME):
+    """Versiones ya registradas del prompt ([] si el prompt aún no existe)."""
     try:
         return list(MlflowClient().search_prompt_versions(name))
     except Exception:
@@ -90,6 +92,7 @@ def register_prompts(name=PROMPT_NAME, path=PROMPT_DIR, verbose=True):
 
 
 def promote(version: int, alias=PRODUCTION_ALIAS, name=PROMPT_NAME):
+    """Mueve el alias (@production por defecto) a otra versión. La app lo nota en ~30 s."""
     MlflowClient().set_prompt_alias(name, alias, int(version))
     print(f"🚀 {name}@{alias} → v{version}")
 
