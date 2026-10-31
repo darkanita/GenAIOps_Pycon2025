@@ -2,6 +2,17 @@
 
 Este proyecto demuestra cómo construir, evaluar y automatizar un chatbot de tipo RAG (Retrieval Augmented Generation) con buenas prácticas de **GenAIOps**.
 
+**¿Primera vez aquí?** Sigue el [🧭 Recorrido guiado](#-recorrido-guiado-empieza-aquí): en unos 60–90 minutos recorres el repositorio de punta a punta.
+
+| Sección | Para qué |
+|---|---|
+| [⚡ Inicio rápido](#-inicio-rápido) | Levantar todo con 5 comandos |
+| [🧭 Recorrido guiado](#-recorrido-guiado-empieza-aquí) | Aprender el repositorio paso a paso, con ejercicios |
+| [🚦 Ciclo de vida GenAIOps](#-ciclo-de-vida-genaiops-aplicado) | Referencia de cada etapa y sus comandos |
+| [🔬 Cómo funciona MLflow](#-cómo-funciona-mlflow-en-este-proyecto) | Conceptos, qué se guarda, ciclo de mejora y guía de la UI |
+| [🛠️ Solución de problemas](#️-solución-de-problemas) | Errores frecuentes |
+| [🎓 Desafío para estudiantes](#-desafío-para-estudiantes) | Retos para practicar |
+
 ---
 
 ## 🧠 Caso de Estudio
@@ -58,6 +69,115 @@ mlflow ui --port 5000                   # trazas, prompts, evaluaciones y versio
 > 🔄 Para entender qué hace MLflow en cada paso y cómo iterar sobre el prompt, ve a [Cómo funciona MLflow en este proyecto](#-cómo-funciona-mlflow-en-este-proyecto).
 
 > 💻 **GitHub Codespaces**: abre el repo en **Code → Codespaces → Create codespace**. Las dependencias se instalan solas y los puertos `8501` (Streamlit) y `5000` (MLflow) quedan reenviados. Puedes guardar `OPENAI_API_KEY` / `GROQ_API_KEY` como [secrets de Codespaces](https://github.com/settings/codespaces) en lugar de usar `.env`.
+
+---
+
+## 🧭 Recorrido guiado (empieza aquí)
+
+Este recorrido te lleva por todo el repositorio en orden. En cada paso: **haz** algo, **observa** el resultado, **entiende** el concepto y **lee** el archivo que lo implementa. Necesitas dos terminales: una para la app y otra para MLflow.
+
+> Antes de empezar: completa la [preparación del entorno](#1--preparación-del-entorno) (instalar dependencias y crear `.env`). Si usas Groq, revisa [Evaluar con el plan gratuito de Groq](#-evaluar-con-el-plan-gratuito-de-groq).
+
+### Paso 1 · Construir el índice de documentos
+**Haz:**
+```bash
+python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
+```
+**Observa:** aparece la carpeta `vectorstore/openai/` o `vectorstore/fastembed/`.
+**Entiende:** los PDFs se dividen en fragmentos (*chunks*), cada fragmento se convierte en un vector (*embedding*) y se guarda en un índice FAISS para buscarlos por similitud.
+**Lee:** `app/rag_pipeline.py` → `save_vectorstore()` y `app/llm_provider.py` → `get_embeddings()`.
+
+### Paso 2 · Registrar los prompts y abrir MLflow
+**Haz:**
+```bash
+python -m app.prompt_registry
+mlflow ui --port 5000        # en otra terminal; abre http://localhost:5000
+```
+**Observa:** la consola muestra `asistente_rrhh v1`, `v2` y `@production → v1`. En MLflow, menú **Prompts** → `asistente_rrhh`: las dos versiones con sus alias.
+**Entiende:** cada archivo de `app/prompts/` es una **versión** del mismo prompt; el alias `@production` dice cuál usa la app.
+**Lee:** `app/prompts/*.txt` y `app/prompt_registry.py`.
+
+### Paso 3 · Conversar con el chatbot
+**Haz:**
+```bash
+streamlit run app/main_interface.py
+```
+Haz clic en una pregunta de ejemplo, abre **📚 Referencias** y califica la respuesta con 👍 o 👎.
+**Observa:** la respuesta, los documentos y páginas usados, el tiempo de respuesta y, en la barra lateral, el proveedor, el modelo y el **Prompt resuelto** (`asistente_rrhh/1`).
+**Entiende:** es un RAG: busca los fragmentos más parecidos a la pregunta y se los entrega al LLM junto con el prompt.
+**Lee:** `app/chat_ui.py` → `render_chat()` y `app/rag_pipeline.py` → `build_chain()`.
+
+### Paso 4 · Inspeccionar la traza de esa respuesta
+**Haz:** en MLflow → **Experiments** → `chatbot_rrhh` → **Traces** → abre la traza más reciente.
+**Observa:** el árbol de pasos (*spans*): reformulación de la pregunta, el **retriever** con los fragmentos que encontró, el prompt final enviado al LLM y su respuesta, con tokens y latencia. En *Assessments* está tu 👍/👎 como `user_feedback`.
+**Entiende:** el **tracing** permite saber *por qué* el bot respondió lo que respondió. Si la respuesta es mala, la traza muestra si falló la búsqueda o el LLM.
+**Lee:** `app/tracking.py`.
+
+### Paso 5 · Experimentar con la recuperación
+**Haz:** en la barra lateral cambia **Fragmentos a recuperar (k)** a `1` y repite la misma pregunta; luego prueba con `8`.
+**Observa:** cambian las referencias y la respuesta. En **Traces**, cada respuesta queda enlazada a una versión distinta de la app (`...-k1`, `...-k8`), visible en **Agent versions**.
+**Entiende:** la calidad de un RAG depende tanto de *qué se recupera* como del LLM. Cada combinación proveedor + modelo + prompt + k es una **versión de la app** que se puede comparar.
+
+### Paso 6 · Evaluar con jueces LLM
+**Haz:**
+```bash
+python app/run_eval.py
+# Con Groq, para ir más rápido: EVAL_SCORERS=correctness,retrieval_groundedness python app/run_eval.py
+```
+**Observa:** la consola muestra el promedio de cada juez (`correctness/mean`, `safety/mean`, …). En MLflow → `rag_evaluation` → **Evaluation runs**, abre el run: cada pregunta con el veredicto y el **razonamiento** de cada juez.
+**Entiende:** en lugar de revisar respuestas a mano, otros LLM las califican contra la respuesta esperada (`tests/eval_dataset.json`) y contra criterios como "no inventar información".
+**Lee:** `app/run_eval.py` → `get_scorers()` y `tests/eval_dataset.json`.
+
+### Paso 7 · Comparar dos versiones del prompt
+**Haz:**
+```bash
+PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo python app/run_eval.py
+streamlit run app/dashboard.py
+```
+**Observa:** en el dashboard, **Comparación de configuraciones** muestra las dos evaluaciones lado a lado; en **Detalle por pregunta** ves en qué preguntas difieren.
+**Entiende:** así se decide con evidencia qué prompt es mejor, en vez de por intuición.
+**Lee:** `app/metrics_ui.py`.
+
+### Paso 8 · Promover la mejor versión
+**Haz:** si la v2 fue mejor:
+```bash
+python -m app.prompt_registry --promote 2
+```
+**Observa:** en tu siguiente pregunta (puede tardar hasta 30 s en notarse) la barra lateral del chat muestra **Prompt resuelto: `asistente_rrhh/2`**, sin reiniciar ni tocar código. En MLflow → **Prompts**, el alias `@production` ahora está en la v2.
+**Entiende:** separar *qué versión existe* (registro) de *cuál está en producción* (alias) permite cambiar y revertir de forma segura.
+
+### Paso 9 · Crear tu propia versión
+**Haz:** crea `app/prompts/v3_mi_prompt.txt` (debe incluir `{question}` y `{context}`), luego:
+```bash
+python -m app.prompt_registry          # → asistente_rrhh v3 (@v3_mi_prompt)
+PROMPT_VERSION=prompts:/asistente_rrhh/3 python app/run_eval.py
+```
+**Observa:** la v3 aparece en el registro, en el selector de prompts del chat y en el dashboard junto a las demás.
+**Entiende:** este es el [ciclo de mejora](#-el-ciclo-de-mejora) completo: editar → registrar → evaluar → comparar → promover.
+
+### Paso 10 · El quality gate y la automatización
+**Haz:**
+```bash
+pytest tests/test_run_eval.py -v
+```
+**Observa:** el test pasa o falla según la **última** evaluación (`correctness ≥ 0.8`, `safety = 1.0`).
+**Entiende:** en GitHub Actions estos mismos pasos (registrar, indexar, evaluar, verificar) corren en cada push y bloquean cambios que empeoren la calidad.
+**Lee:** `tests/test_run_eval.py` y `.github/workflows/eval.yml`.
+
+### 🗺️ Mapa de archivos: qué leer y en qué orden
+
+| Orden | Archivo | Qué aprendes |
+|---|---|---|
+| 1 | `app/llm_provider.py` | Cómo se elige el LLM, los embeddings y el juez según `.env` |
+| 2 | `app/rag_pipeline.py` | Indexación de PDFs y construcción de la cadena RAG |
+| 3 | `app/prompt_registry.py` | Registro, alias y carga de prompts en MLflow |
+| 4 | `app/tracking.py` | Tracing, versiones de la app y feedback |
+| 5 | `app/chat_ui.py` | La interfaz de chat y cómo usa todo lo anterior |
+| 6 | `app/run_eval.py` | Evaluación con jueces LLM |
+| 7 | `app/metrics_ui.py` | Cómo se leen los resultados de MLflow para el dashboard |
+| 8 | `tests/test_run_eval.py` y `.github/workflows/eval.yml` | Quality gate y CI |
+
+`ui_streamlit.py`, `main_interface.py` y `dashboard.py` son solo puntos de entrada que llaman a `chat_ui.py` y `metrics_ui.py`.
 
 ---
 
