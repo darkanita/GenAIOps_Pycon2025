@@ -7,7 +7,7 @@ Variables de entorno:
     LLM_PROVIDER          openai | groq                  (default: openai)
     LLM_MODEL             modelo de chat a usar          (default según proveedor)
     EVAL_MODEL            juez de run_eval.py, formato proveedor:/modelo
-                          (default: openai:/gpt-4o-mini o groq:/openai/gpt-oss-120b)
+                          (default: openai:/gpt-4o-mini o groq:/openai/gpt-oss-20b)
     EMBEDDINGS_PROVIDER   openai | fastembed             (default: openai si LLM_PROVIDER=openai,
                                                                    fastembed si LLM_PROVIDER=groq)
     EMBEDDINGS_MODEL      modelo de embeddings           (default según proveedor)
@@ -31,7 +31,9 @@ DEFAULT_LLM_MODELS = {
 # los proveedores distintos de OpenAI/Anthropic se resuelven vía LiteLLM.
 DEFAULT_JUDGE_MODELS = {
     "openai": "openai:/gpt-4o-mini",
-    "groq": "groq:/openai/gpt-oss-120b",
+    # Modelo distinto al del chat: en Groq los límites son por modelo,
+    # así el juez no consume la cuota del chatbot.
+    "groq": "groq:/openai/gpt-oss-20b",
 }
 
 DEFAULT_EMBEDDINGS_MODELS = {

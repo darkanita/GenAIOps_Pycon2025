@@ -11,6 +11,7 @@ Uso:
     python app/run_eval.py
     PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo python app/run_eval.py
     RETRIEVER_K=6 python app/run_eval.py
+    EVAL_SCORERS=correctness,retrieval_groundedness python app/run_eval.py   # solo algunos jueces
 """
 
 import sys, os
@@ -43,6 +44,15 @@ CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP") or 50)
 K = int(os.getenv("RETRIEVER_K") or 4)
 DATASET_PATH = "tests/eval_dataset.json"
 
+# Paralelismo de MLflow. Por defecto evalúa ~10 filas x 10 jueces a la vez, lo que
+# supera los límites gratuitos de Groq (30 solicitudes y 8K tokens por minuto).
+# Con Groq usamos un modo pausado; cualquier valor puesto en .env tiene prioridad.
+if os.getenv("LLM_PROVIDER", "openai").strip().lower() == "groq":
+    os.environ.setdefault("MLFLOW_GENAI_EVAL_MAX_WORKERS", "1")         # una pregunta a la vez
+    os.environ.setdefault("MLFLOW_GENAI_EVAL_MAX_SCORER_WORKERS", "2")  # 2 jueces en paralelo
+    os.environ.setdefault("MLFLOW_GENAI_EVAL_SCORER_RATE_LIMIT", "0.2") # ~12 llamadas/min
+    os.environ.setdefault("MLFLOW_GENAI_EVAL_MAX_RETRIES", "8")         # más reintentos ante 429
+
 
 def load_eval_dataset(path=DATASET_PATH):
     """Convierte {question, answer} al formato de MLflow: inputs + expectations."""
@@ -61,8 +71,9 @@ def get_scorers(judge_model: str):
     """
     Jueces predefinidos de MLflow + guías propias en lenguaje natural.
     👉 Desafío: agrega aquí tus propios scorers (ver README).
+    Con EVAL_SCORERS=correctness,safety se ejecutan solo los indicados.
     """
-    return [
+    scorers = [
         Correctness(model=judge_model),            # ¿coincide con la respuesta esperada?
         RelevanceToQuery(model=judge_model),       # ¿responde a lo que se preguntó?
         RetrievalGroundedness(model=judge_model),  # ¿está sustentada en los documentos? (alucinación)
@@ -82,6 +93,14 @@ def get_scorers(judge_model: str):
             model=judge_model,
         ),
     ]
+    selected = [n.strip() for n in os.getenv("EVAL_SCORERS", "").split(",") if n.strip()]
+    if selected:
+        unknown = set(selected) - {sc.name for sc in scorers}
+        if unknown:
+            raise ValueError(f"EVAL_SCORERS desconocidos: {unknown}. "
+                             f"Disponibles: {[sc.name for sc in scorers]}")
+        scorers = [sc for sc in scorers if sc.name in selected]
+    return scorers
 
 
 def main():
@@ -94,7 +113,10 @@ def main():
 
     print(f"📊 Experimento MLflow: {EVAL_EXPERIMENT}")
     print(f"⚙️  App: {describe()} | prompt={prompt_uri} | k={K}")
-    print(f"⚖️  Juez: {judge_model}")
+    scorers = get_scorers(judge_model)
+    print(f"⚖️  Juez: {judge_model} | {len(scorers)} jueces: {[sc.name for sc in scorers]}")
+    if os.getenv("MLFLOW_GENAI_EVAL_MAX_WORKERS") == "1":
+        print("🐢 Modo pausado para respetar los límites del proveedor (puede tardar varios minutos)")
 
     def predict_fn(question: str) -> str:
         result = chain.invoke({"question": question, "chat_history": []})
@@ -112,7 +134,7 @@ def main():
         results = mlflow.genai.evaluate(
             data=load_eval_dataset(),
             predict_fn=predict_fn,
-            scorers=get_scorers(judge_model),
+            scorers=scorers,
             model_id=model_id,
         )
 

@@ -117,7 +117,8 @@ Todo se configura en `.env`, sin tocar código:
 | `OPENAI_API_KEY` / `GROQ_API_KEY` | key del proveedor que uses | — |
 | `EMBEDDINGS_PROVIDER` | `openai` \| `fastembed` (local) | `openai` con OpenAI, `fastembed` con Groq |
 | `EMBEDDINGS_MODEL` | modelo de embeddings | `text-embedding-ada-002` / `paraphrase-multilingual-MiniLM-L12-v2` |
-| `EVAL_MODEL` | juez de `run_eval.py`, formato `proveedor:/modelo` | `openai:/gpt-4o-mini` / `groq:/openai/gpt-oss-120b` |
+| `EVAL_MODEL` | juez de `run_eval.py`, formato `proveedor:/modelo` | `openai:/gpt-4o-mini` / `groq:/openai/gpt-oss-20b` |
+| `EVAL_SCORERS` | ejecutar solo algunos jueces, separados por coma | todos |
 | `PROMPT_VERSION` | prompt a usar (ver paso 3) | `prompts:/asistente_rrhh@production` |
 | `RETRIEVER_K` | fragmentos que se envían al LLM en `run_eval.py` | `4` |
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | tamaño y solape de los fragmentos al construir el índice (paso 2) | `512` / `50` |
@@ -275,7 +276,20 @@ Usa `mlflow.genai.evaluate` con `tests/eval_dataset.json` como ground truth y es
 
 - Cada juez deja un **veredicto y su razonamiento** en la traza de cada pregunta.
 - Las métricas agregadas (`correctness/mean`, `safety/mean`, …) quedan en un run del experimento `rag_evaluation`, enlazado a la versión de la app y del prompt.
-- El juez se configura con `EVAL_MODEL` (default: `openai:/gpt-4o-mini` o `groq:/openai/gpt-oss-120b`).
+- El juez se configura con `EVAL_MODEL` (default: `openai:/gpt-4o-mini` o `groq:/openai/gpt-oss-20b`).
+- Para ahorrar cuota mientras iteras, ejecuta solo algunos jueces:
+  ```bash
+  EVAL_SCORERS=correctness,retrieval_groundedness python app/run_eval.py
+  ```
+
+#### 🐢 Evaluar con el plan gratuito de Groq
+
+El plan gratuito de Groq limita cada modelo a **30 solicitudes y 8K tokens por minuto, y 200K tokens por día**. Una evaluación completa (5 preguntas × 7 jueces) hace unas 50 llamadas al juez, así que:
+
+- Con `LLM_PROVIDER=groq`, `run_eval.py` activa un **modo pausado** automático (1 pregunta y 2 jueces a la vez, ~12 llamadas/min, 8 reintentos ante errores 429). Una evaluación completa tarda **varios minutos**.
+- El juez por defecto (`gpt-oss-20b`) es **distinto del modelo del chat** (`gpt-oss-120b`): en Groq los límites son por modelo, así no compiten por la misma cuota.
+- Los mensajes `Rate-limited (attempt 1/4), retrying...` son normales: MLflow reintenta solo. Solo es un problema si al final aparecen jueces con ⚠️.
+- Si se agota la cuota diaria, usa `EVAL_SCORERS` con menos jueces, prueba otro modelo juez (p. ej. `EVAL_MODEL=groq:/qwen/qwen3.6-27b`) o usa OpenAI como juez (`EVAL_MODEL=openai:/gpt-4o-mini`).
 
 ---
 
@@ -341,7 +355,8 @@ pytest tests/test_run_eval.py -v
 |---|---|
 | `No existe el índice en 'vectorstore/...'` | Falta construir el índice, o cambiaste `EMBEDDINGS_PROVIDER`: ejecuta el paso 2. |
 | La primera consulta con Groq tarda mucho | FastEmbed descarga el modelo de embeddings (~220 MB) la primera vez. |
-| `run_eval.py` muestra jueces con ⚠️ o errores 429 | Límite de llamadas del proveedor (cada evaluación hace ~50 llamadas al juez). Usa un juez más liviano, p. ej. `EVAL_MODEL=groq:/openai/gpt-oss-20b`, o espera y reintenta. |
+| Muchos `Rate-limited ... retrying` durante `run_eval.py` | Normal con el plan gratuito de Groq: MLflow reintenta solo. Ver [Evaluar con el plan gratuito de Groq](#-evaluar-con-el-plan-gratuito-de-groq). |
+| Jueces con ⚠️ al final de la evaluación | Se agotaron los reintentos o la cuota diaria. Reduce jueces con `EVAL_SCORERS`, baja el ritmo con `MLFLOW_GENAI_EVAL_SCORER_RATE_LIMIT=0.1` o cambia `EVAL_MODEL`. |
 | El dashboard no muestra evaluaciones anteriores | Las versiones previas del repo guardaban en `mlruns/` con otro formato; ahora todo vive en `mlflow.db`. Vuelve a ejecutar `run_eval.py`. |
 | `mlflow ui` no muestra nada | Ejecútalo desde la raíz del repo (donde está `mlflow.db`) o usa `mlflow ui --backend-store-uri sqlite:///mlflow.db`. |
 | El prompt editado no cambia en la app | Registra la nueva versión (`python -m app.prompt_registry`) y, si la quieres en producción, promuévela con `--promote N`. La lista de prompts en la app se refresca cada 30 s. |
