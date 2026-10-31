@@ -94,6 +94,21 @@ def promote(version: int, alias=PRODUCTION_ALIAS, name=PROMPT_NAME):
     print(f"🚀 {name}@{alias} → v{version}")
 
 
+def resolve_prompt_ref(ref: str) -> str:
+    """
+    Convierte un alias en su versión concreta: prompts:/asistente_rrhh@production
+    → prompts:/asistente_rrhh/3. Consulta el registro sin caché, para que una
+    promoción (--promote) se note de inmediato. Otras referencias se devuelven igual.
+    """
+    if not ref.startswith("prompts:/") or "@" not in ref:
+        return ref
+    pv = mlflow.genai.load_prompt(ref, allow_missing=True, cache_ttl_seconds=0)
+    if pv is None:  # primera ejecución: registrar los archivos locales
+        register_prompts(verbose=True)
+        pv = mlflow.genai.load_prompt(ref, cache_ttl_seconds=0)
+    return f"prompts:/{pv.name}/{pv.version}"
+
+
 def load_prompt_text(ref: str) -> tuple[str, str]:
     """
     Devuelve (template_en_formato_langchain, uri_resuelta).

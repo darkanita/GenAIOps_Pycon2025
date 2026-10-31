@@ -20,7 +20,7 @@ import mlflow
 import streamlit as st
 
 from app.llm_provider import describe
-from app.prompt_registry import DEFAULT_PROMPT
+from app.prompt_registry import DEFAULT_PROMPT, resolve_prompt_ref
 from app.rag_pipeline import (
     build_chain,
     list_prompt_versions,
@@ -48,6 +48,12 @@ def get_chain(prompt_version: str, k: int):
     chain = build_chain(get_vectordb(), prompt_version=prompt_version, k=k)
     prompt_uri = chain.combine_docs_chain.llm_chain.prompt.metadata["prompt_uri"]
     return chain, prompt_uri
+
+
+@st.cache_data(ttl=30, show_spinner=False)
+def resolve_prompt(ref: str) -> str:
+    """Alias → versión concreta. Se revisa cada 30 s: una promoción llega sin reiniciar."""
+    return resolve_prompt_ref(ref)
 
 
 @st.cache_data(ttl=30, show_spinner=False)
@@ -164,7 +170,7 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
         st.session_state.messages = []
 
     try:
-        chain, prompt_uri = get_chain(config["prompt_version"], config["k"])
+        chain, prompt_uri = get_chain(resolve_prompt(config["prompt_version"]), config["k"])
     except FileNotFoundError as e:
         st.error(str(e))
         st.stop()

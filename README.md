@@ -55,6 +55,8 @@ python app/run_eval.py                  # evaluación con jueces LLM
 mlflow ui --port 5000                   # trazas, prompts, evaluaciones y versiones
 ```
 
+> 🔄 Para entender qué hace MLflow en cada paso y cómo iterar sobre el prompt, ve a [Cómo funciona MLflow en este proyecto](#-cómo-funciona-mlflow-en-este-proyecto).
+
 > 💻 **GitHub Codespaces**: abre el repo en **Code → Codespaces → Create codespace**. Las dependencias se instalan solas y los puertos `8501` (Streamlit) y `5000` (MLflow) quedan reenviados. Puedes guardar `OPENAI_API_KEY` / `GROQ_API_KEY` como [secrets de Codespaces](https://github.com/settings/codespaces) en lugar de usar `.env`.
 
 ---
@@ -194,9 +196,12 @@ La app referencia el prompt con una URI (variable `PROMPT_VERSION` en `.env`):
 | `prompts:/asistente_rrhh@latest` | la última versión registrada |
 | `v1_asistente_rrhh` | archivo local, sin usar el registro |
 
-> La primera vez que se carga un prompt del registro, si aún no existe, se registra automáticamente.
+> ⚠️ **¿Cuándo se registra un prompt?**
+> - **Automático** solo la primera vez (si el registro está vacío) y en el CI.
+> - **Manual** cada vez que edites o agregues un `.txt`: ejecuta `python -m app.prompt_registry`. Hasta entonces, la app sigue usando la versión anterior.
+> - **Promover** a producción siempre es manual (`--promote N`), para que ningún cambio llegue a producción sin decidirlo.
 
-En la UI de MLflow (`mlflow ui`) → pestaña **Prompts** puedes ver las versiones, compararlas (diff) y mover alias.
+En la UI de MLflow (`mlflow ui`) → menú **Prompts** → `asistente_rrhh` puedes ver las versiones, compararlas (diff) y mover alias.
 
 ---
 
@@ -244,12 +249,7 @@ Además, cada combinación **proveedor + modelo + prompt + k** se registra como 
 mlflow ui --port 5000
 ```
 
-- **Experiments → chatbot_rrhh → Traces**: conversaciones reales con su feedback
-- **Experiments → rag_evaluation**: evaluaciones con el razonamiento de cada juez
-- **Models / Agent versions**: versiones de la app y sus métricas
-- **Prompts**: versiones y alias del prompt
-
-> MLflow guarda todo en `./mlflow.db` (SQLite). Para usar un servidor: `MLFLOW_TRACKING_URI=http://...`
+Ver [Dónde mirar en la UI de MLflow](#-dónde-mirar-en-la-ui-de-mlflow) para saber qué encontrar en cada pantalla.
 
 ---
 
@@ -322,6 +322,80 @@ pytest tests/test_run_eval.py -v
 
 - Verifica que la última evaluación supere los umbrales: `correctness ≥ 0.8` y `safety = 1.0`
 - Ajustables con `MIN_CORRECTNESS` y `MIN_SAFETY`
+
+---
+
+## 🔬 Cómo funciona MLflow en este proyecto
+
+### 📖 Conceptos clave
+
+| Concepto | Qué es aquí |
+|---|---|
+| **Experimento** | Carpeta lógica que agrupa resultados. Hay uno para el chat (`chatbot_rrhh`) y otro para las evaluaciones (`rag_evaluation`). |
+| **Run** | Una ejecución con parámetros y métricas. Cada `python app/run_eval.py` crea un run de evaluación. |
+| **Traza** (*trace*) | El registro de **una** pregunta respondida, con sus pasos (*spans*): reformulación, retriever, prompt, LLM, tokens y latencia. |
+| **Assessment / Feedback** | Una calificación adjunta a una traza: el veredicto de un juez (con su razonamiento) o el 👍/👎 de un usuario. |
+| **Juez** (*scorer*) | Función que califica una traza. Puede ser un LLM (`Correctness`, `Guidelines`…) o código Python (`@scorer`). |
+| **Prompt Registry** | Registro de prompts con versiones inmutables (1, 2, 3…) y **alias** movibles (`@production`). |
+| **Versión de la app** (*Agent version* / `LoggedModel`) | Una combinación concreta de proveedor + modelo + prompt + `k`. Trazas y evaluaciones quedan enlazadas a ella para poder comparar. |
+
+### 🗄️ Qué guarda MLflow y dónde
+
+Todo vive en `./mlflow.db` (SQLite), en la raíz del repo.
+
+| Dónde | Qué contiene | Lo genera |
+|---|---|---|
+| Prompt Registry → `asistente_rrhh` | Versiones del prompt y sus alias | `python -m app.prompt_registry` |
+| Experimento `chatbot_rrhh` | Una traza por cada pregunta hecha en Streamlit + el 👍/👎 del usuario | La app de Streamlit |
+| Experimento `rag_evaluation` | Un run por evaluación (métricas promedio por juez) + una traza por pregunta con el veredicto y razonamiento de cada juez | `python app/run_eval.py` |
+| Experimento `vectorstore_tracking` | Parámetros de cada construcción del índice (chunks, documentos) | `save_vectorstore()` |
+
+### 🔄 El ciclo de mejora
+
+Así se usa MLflow para mejorar el chatbot de forma controlada:
+
+```mermaid
+flowchart LR
+    A["1️⃣ Editar prompt<br/>app/prompts/*.txt"] --> B["2️⃣ Registrar versión<br/>prompt_registry"]
+    B --> C["3️⃣ Evaluar<br/>run_eval.py"]
+    C --> D["4️⃣ Comparar<br/>dashboard / mlflow ui"]
+    D -->|mejor| E["5️⃣ Promover<br/>--promote N"]
+    D -->|peor| A
+    E --> F["6️⃣ Usuarios<br/>trazas + 👍/👎"]
+    F --> G["7️⃣ Respuestas con 👎<br/>al dataset de evaluación"]
+    G --> A
+```
+
+| Paso | Comando | Qué pasa en MLflow |
+|---|---|---|
+| 1. Editar | Modifica o crea un `.txt` en `app/prompts/` | Nada todavía |
+| 2. Registrar | `python -m app.prompt_registry` | Nueva versión del prompt (p. ej. v3) con alias por nombre de archivo |
+| 3. Evaluar | `PROMPT_VERSION=prompts:/asistente_rrhh/3 python app/run_eval.py` | Run en `rag_evaluation` con métricas por juez y una traza por pregunta |
+| 4. Comparar | `streamlit run app/dashboard.py` o `mlflow ui` | Ves la v3 junto a las versiones anteriores |
+| 5. Promover | `python -m app.prompt_registry --promote 3` | El alias `@production` apunta a v3; la app la usa sin cambiar código (se refresca en ~30 s) |
+| 6. Monitorear | Usuarios usan el chat | Trazas en `chatbot_rrhh` enlazadas a la versión de la app, con su 👍/👎 |
+| 7. Ampliar el dataset | Revisa las respuestas con 👎 en el dashboard y agrégalas a `tests/eval_dataset.json` | La siguiente evaluación cubre esos casos |
+
+El CI (`eval.yml`) repite los pasos 2 y 3 en cada push y bloquea el cambio si no supera el *quality gate*.
+
+### 🧭 Dónde mirar en la UI de MLflow
+
+```bash
+mlflow ui --port 5000      # desde la raíz del repo (donde está mlflow.db)
+```
+
+En el menú principal están **Experiments** y **Prompts**. Al abrir un experimento aparece una barra lateral con estas pantallas:
+
+| Quiero ver… | Ve a |
+|---|---|
+| Las versiones del prompt, su diff y alias | Menú **Prompts** → `asistente_rrhh` |
+| Las conversaciones reales y su 👍/👎 | **Experiments** → `chatbot_rrhh` → **Traces** |
+| Los pasos de una respuesta (qué recuperó, qué prompt usó) | Cualquier traza → abrir → árbol de *spans* |
+| Las evaluaciones y sus métricas promedio | **Experiments** → `rag_evaluation` → **Evaluation runs** |
+| El veredicto y razonamiento de cada juez por pregunta | **Evaluation runs** → abrir un run, o **Traces** → abrir una traza → *Assessments* |
+| Las versiones de la app (proveedor + modelo + prompt + k) | Dentro de cada experimento → **Agent versions** |
+
+> Las pantallas **Judges**, **Review**, **Datasets** y **Playground** también existen en MLflow 3, pero este proyecto aún no las usa: son buenas candidatas para el desafío.
 
 ---
 
