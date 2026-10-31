@@ -19,7 +19,7 @@ jobs:
     - name: Configurar Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.10
+        python-version: '3.10'
 
     - name: Instalar dependencias
       run: |
@@ -28,6 +28,9 @@ jobs:
 
     - name: Ejecutar evaluación
       env:
+        LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'openai' }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       run: |
+        python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
         python app/run_eval.py

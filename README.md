@@ -47,8 +47,31 @@ cd chatbot-genaiops
 conda create -n chatbot-genaiops python=3.10 -y
 conda activate chatbot-genaiops
 pip install -r requirements.txt
-cp .env.example .env  # Agrega tu API KEY de OpenAI
+cp .env.example .env  # Agrega tu API KEY de OpenAI o de Groq
 ```
+
+#### 🔀 Elegir proveedor: OpenAI o Groq
+
+El proveedor se elige en `.env`, sin tocar código (ver `app/llm_provider.py`):
+
+| Variable | Valores | Default |
+|---|---|---|
+| `LLM_PROVIDER` | `openai` \| `groq` | `openai` |
+| `LLM_MODEL` | cualquier modelo del proveedor | `gpt-4o` / `openai/gpt-oss-120b` |
+| `EVAL_MODEL` | modelo juez para `run_eval.py` | igual a `LLM_MODEL` |
+| `EMBEDDINGS_PROVIDER` | `openai` \| `fastembed` | `openai` con OpenAI, `fastembed` con Groq |
+| `EMBEDDINGS_MODEL` | modelo de embeddings | `text-embedding-ada-002` / `paraphrase-multilingual-MiniLM-L12-v2` |
+
+**Usar Groq** (obtén tu key en [console.groq.com](https://console.groq.com/keys)):
+
+```env
+LLM_PROVIDER=groq
+GROQ_API_KEY=gsk_xxxxx
+```
+
+> ℹ️ Groq no ofrece API de embeddings, así que con Groq los embeddings se calculan **localmente** con [FastEmbed](https://github.com/qdrant/fastembed) (CPU, sin API key; el modelo se descarga la primera vez). Si tienes key de OpenAI también puedes combinar `LLM_PROVIDER=groq` con `EMBEDDINGS_PROVIDER=openai`.
+>
+> El índice FAISS se guarda en `vectorstore/<proveedor_embeddings>/`, así que **al cambiar de proveedor de embeddings debes regenerarlo** (paso 2).
 
 ---
 
@@ -62,8 +85,8 @@ python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
 
 Esto:
 - Divide los documentos en chunks (por defecto `chunk_size=512`, `chunk_overlap=50`)
-- Genera embeddings con OpenAI
-- Guarda el índice vectorial en `vectorstore/`
+- Genera embeddings con OpenAI o FastEmbed (según `EMBEDDINGS_PROVIDER`)
+- Guarda el índice vectorial en `vectorstore/openai/` o `vectorstore/fastembed/`
 - Registra los parámetros en **MLflow**
 
 🔧 Para personalizar:
@@ -86,7 +109,7 @@ chain = build_chain(vectordb, prompt_version="v1_asistente_rrhh")
 ```
 
 - Soporta múltiples versiones de prompt
-- Usa `ConversationalRetrievalChain` con `LangChain` + `OpenAI`
+- Usa `ConversationalRetrievalChain` con `LangChain` + `OpenAI` o `Groq` (según `LLM_PROVIDER`)
 
 ---
 
@@ -116,7 +139,7 @@ Esto:
 - Usa `tests/eval_dataset.json` como ground truth
 - Genera respuestas usando el RAG actual
 - Evalúa con `LangChain Eval (QAEvalChain)`
-- Registra resultados en **MLflow**
+- Registra resultados en **MLflow**, incluyendo `llm_provider`, `llm_model` y `embeddings_*`, para comparar proveedores
 
 ---
 
@@ -137,6 +160,7 @@ streamlit run app/dashboard.py
 ### 7. 🔁 Automatización con GitHub Actions
 
 - CI de evaluación: `.github/workflows/eval.yml`
+  - Para usar Groq en CI: crea el secret `GROQ_API_KEY` y la variable de repositorio `LLM_PROVIDER=groq` (Settings → Secrets and variables → Actions)
 - Test unitarios: `.github/workflows/test.yml`
 
 ---
@@ -163,7 +187,8 @@ pytest tests/test_run_eval.py
 
 ## ⚙️ Stack Tecnológico
 
-- **OpenAI + LangChain** – LLM + RAG
+- **OpenAI / Groq + LangChain** – LLM + RAG (proveedor configurable)
+- **FastEmbed** – Embeddings locales (cuando se usa Groq)
 - **FAISS** – Vectorstore
 - **Streamlit** – UI
 - **MLflow** – Registro de experimentos

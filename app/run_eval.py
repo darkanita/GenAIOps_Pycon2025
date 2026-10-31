@@ -6,7 +6,7 @@ import mlflow
 from dotenv import load_dotenv
 from app.rag_pipeline import load_vectorstore_from_disk, build_chain
 
-from langchain_openai import ChatOpenAI
+from app.llm_provider import get_eval_llm, describe
 from langchain.evaluation.qa import QAEvalChain
 
 load_dotenv()
@@ -26,12 +26,13 @@ vectordb = load_vectorstore_from_disk()
 chain = build_chain(vectordb, prompt_version=PROMPT_VERSION)
 
 # LangChain Evaluator
-llm = ChatOpenAI(temperature=0)
+llm = get_eval_llm(temperature=0)
 langchain_eval = QAEvalChain.from_llm(llm)
 
 # ✅ Establecer experimento una vez
 mlflow.set_experiment(f"eval_{PROMPT_VERSION}")
 print(f"📊 Experimento MLflow: eval_{PROMPT_VERSION}")
+print(f"⚙️  Configuración de modelos: {describe()}")
 
 # Evaluación por lote
 for i, pair in enumerate(dataset):
@@ -61,6 +62,7 @@ for i, pair in enumerate(dataset):
         mlflow.log_param("prompt_version", PROMPT_VERSION)
         mlflow.log_param("chunk_size", CHUNK_SIZE)
         mlflow.log_param("chunk_overlap", CHUNK_OVERLAP)
+        mlflow.log_params(describe())  # llm_provider, llm_model, embeddings_*
 
         mlflow.log_metric("lc_is_correct", is_correct)
 
