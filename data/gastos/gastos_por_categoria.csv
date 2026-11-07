@@ -1,0 +1,73 @@
+trimestre,area,categoria,monto_cop
+T1-2026,Suscripción y Actuaría,Software y licencias,123000000
+T1-2026,Suscripción y Actuaría,Consultoría,103600000
+T1-2026,Suscripción y Actuaría,Capacitación,59300000
+T2-2026,Suscripción y Actuaría,Software y licencias,157000000
+T2-2026,Suscripción y Actuaría,Consultoría,104800000
+T2-2026,Suscripción y Actuaría,Capacitación,61500000
+T3-2026,Suscripción y Actuaría,Software y licencias,167500000
+T3-2026,Suscripción y Actuaría,Consultoría,129100000
+T3-2026,Suscripción y Actuaría,Capacitación,77100000
+T1-2026,Siniestros e Indemnizaciones,Servicios de peritaje,318000000
+T1-2026,Siniestros e Indemnizaciones,Honorarios legales,179700000
+T1-2026,Siniestros e Indemnizaciones,Viajes y transporte,90500000
+T2-2026,Siniestros e Indemnizaciones,Servicios de peritaje,363900000
+T2-2026,Siniestros e Indemnizaciones,Honorarios legales,192300000
+T2-2026,Siniestros e Indemnizaciones,Viajes y transporte,89600000
+T3-2026,Siniestros e Indemnizaciones,Servicios de peritaje,397400000
+T3-2026,Siniestros e Indemnizaciones,Honorarios legales,195400000
+T3-2026,Siniestros e Indemnizaciones,Viajes y transporte,112700000
+T1-2026,Comercial y Canales,Viajes y transporte,146100000
+T1-2026,Comercial y Canales,Eventos,156900000
+T1-2026,Comercial y Canales,Comidas con clientes,131200000
+T2-2026,Comercial y Canales,Viajes y transporte,168200000
+T2-2026,Comercial y Canales,Eventos,153000000
+T2-2026,Comercial y Canales,Comidas con clientes,132300000
+T3-2026,Comercial y Canales,Viajes y transporte,199600000
+T3-2026,Comercial y Canales,Eventos,197700000
+T3-2026,Comercial y Canales,Comidas con clientes,165600000
+T1-2026,Marketing,Publicidad y medios,409900000
+T1-2026,Marketing,Eventos,143700000
+T1-2026,Marketing,Consultoría,52500000
+T2-2026,Marketing,Publicidad y medios,396800000
+T2-2026,Marketing,Eventos,159500000
+T2-2026,Marketing,Consultoría,60400000
+T3-2026,Marketing,Publicidad y medios,455700000
+T3-2026,Marketing,Eventos,190100000
+T3-2026,Marketing,Consultoría,73600000
+T1-2026,Tecnología,Infraestructura cloud,346600000
+T1-2026,Tecnología,Software y licencias,274500000
+T1-2026,Tecnología,Consultoría,118600000
+T2-2026,Tecnología,Infraestructura cloud,365200000
+T2-2026,Tecnología,Software y licencias,328500000
+T2-2026,Tecnología,Consultoría,122600000
+T3-2026,Tecnología,Infraestructura cloud,428100000
+T3-2026,Tecnología,Software y licencias,374000000
+T3-2026,Tecnología,Consultoría,129500000
+T1-2026,Talento Humano,Capacitación,73100000
+T1-2026,Talento Humano,Eventos,31900000
+T1-2026,Talento Humano,Consultoría,18600000
+T2-2026,Talento Humano,Capacitación,80200000
+T2-2026,Talento Humano,Eventos,36300000
+T2-2026,Talento Humano,Consultoría,19100000
+T3-2026,Talento Humano,Capacitación,88600000
+T3-2026,Talento Humano,Eventos,40700000
+T3-2026,Talento Humano,Consultoría,22400000
+T1-2026,Riesgos y Cumplimiento,Consultoría,87200000
+T1-2026,Riesgos y Cumplimiento,Honorarios legales,47200000
+T1-2026,Riesgos y Cumplimiento,Software y licencias,32900000
+T2-2026,Riesgos y Cumplimiento,Consultoría,88500000
+T2-2026,Riesgos y Cumplimiento,Honorarios legales,52200000
+T2-2026,Riesgos y Cumplimiento,Software y licencias,39800000
+T3-2026,Riesgos y Cumplimiento,Consultoría,115500000
+T3-2026,Riesgos y Cumplimiento,Honorarios legales,59200000
+T3-2026,Riesgos y Cumplimiento,Software y licencias,43900000
+T1-2026,Administrativa y Financiera,Papelería y oficina,88900000
+T1-2026,Administrativa y Financiera,Honorarios legales,63700000
+T1-2026,Administrativa y Financiera,Software y licencias,96700000
+T2-2026,Administrativa y Financiera,Papelería y oficina,106000000
+T2-2026,Administrativa y Financiera,Honorarios legales,72100000
+T2-2026,Administrativa y Financiera,Software y licencias,111500000
+T3-2026,Administrativa y Financiera,Papelería y oficina,109700000
+T3-2026,Administrativa y Financiera,Honorarios legales,85600000
+T3-2026,Administrativa y Financiera,Software y licencias,138400000

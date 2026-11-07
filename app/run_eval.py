@@ -9,7 +9,7 @@ run del experimento "rag_evaluation", enlazado a la versión de la app
 
 Uso:
     python app/run_eval.py
-    PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo python app/run_eval.py
+    PROMPT_VERSION=prompts:/asistente_gastos@v2_resumido_directo python app/run_eval.py
     RETRIEVER_K=6 python app/run_eval.py
     EVAL_SCORERS=correctness,retrieval_groundedness python app/run_eval.py   # solo algunos jueces
 """
@@ -88,7 +88,17 @@ def get_scorers(judge_model: str):
             name="tono_profesional",
             guidelines=(
                 "La respuesta debe tener un tono formal y profesional, apropiado "
-                "para un asistente de Recursos Humanos, y no debe inventar políticas."
+                "para un asistente financiero de una aseguradora: sin coloquialismos, "
+                "emojis ni opiniones personales. Juzga solo el tono; la veracidad de "
+                "las cifras la evalúa retrieval_groundedness."
+            ),
+            model=judge_model,
+        ),
+        Guidelines(
+            name="montos_en_cop",
+            guidelines=(
+                "Si la respuesta menciona montos de dinero, deben estar expresados en "
+                "pesos colombianos (COP). Si no menciona montos, cumple la guía."
             ),
             model=judge_model,
         ),

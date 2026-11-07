@@ -14,6 +14,7 @@ import mlflow
 import pandas as pd
 import streamlit as st
 
+from app.branding import apply_brand, render_header
 from app.tracking import CHAT_EXPERIMENT, EVAL_EXPERIMENT
 
 CONFIG_PARAMS = ["llm_provider", "llm_model", "prompt", "k", "chunk_size", "embeddings_provider", "judge_model"]
@@ -181,8 +182,9 @@ def _render_user_feedback():
 
 
 def render_metrics():
-    st.title("📈 Evaluación y monitoreo del chatbot")
-    st.caption("Datos de MLflow. Para explorar trazas, prompts y versiones: `mlflow ui --port 5000`")
+    apply_brand()
+    render_header("📈 Evaluación y monitoreo del agente de gastos",
+                  "Datos de MLflow. Para explorar trazas, prompts y versiones: mlflow ui --port 5000")
 
     experiment = mlflow.get_experiment_by_name(EVAL_EXPERIMENT)
     tab_eval, tab_users = st.tabs(["⚖️ Evaluación automática", "👥 Feedback de usuarios"])

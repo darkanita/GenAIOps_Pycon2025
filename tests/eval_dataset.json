@@ -1,32 +1,56 @@
 [
     {
-        "question": "¿Qué cubre el plan de beneficios Northwind Health Plus?",
-        "answer": "Northwind Health Plus cubre servicios médicos, de visión y dentales; medicamentos recetados (genéricos, de marca y especializados); salud mental y abuso de sustancias; atención preventiva; y servicios de emergencia, tanto dentro como fuera de la red.",
+        "question": "¿Cuánto presupuesto le queda disponible al área de Marketing y qué porcentaje ha ejecutado?",
+        "answer": "Al área de Marketing le quedan disponibles $157.800.000 COP y ha ejecutado el 92,5 % de su presupuesto anual a septiembre de 2026.",
         "type": "directa",
-        "source": "Benefit_Options.pdf, p. 3"
+        "source": "presupuesto_por_area.csv, fila 4; resumen_gastos.md"
     },
     {
-        "question": "¿Qué incluye el programa PerksPlus?",
-        "answer": "PerksPlus permite reembolsar hasta 1000 dólares en actividades de bienestar físico, como membresías de gimnasio, entrenamiento personal, clases de yoga o pilates, equipo deportivo y clases grupales. No cubre gastos no relacionados con actividad física, tratamientos médicos, ni comida o suplementos.",
-        "type": "directa",
-        "source": "PerksPlus.pdf, pp. 3-4"
+        "question": "¿Quién debe aprobar un gasto de 30 millones de pesos?",
+        "answer": "Un gasto de $30.000.000 COP está entre $5.000.001 y $50.000.000 COP, por lo que lo aprueba el director del área solicitante con visto bueno de la Dirección Administrativa y Financiera.",
+        "type": "política",
+        "source": "politica_gastos.md, sección 2"
     },
     {
-        "question": "¿Qué no cubre el plan Northwind Standard en comparación con Northwind Health Plus?",
-        "answer": "A diferencia de Northwind Health Plus, Northwind Standard no cubre servicios de emergencia, salud mental y abuso de sustancias, ni servicios fuera de la red; además, en medicamentos solo cubre genéricos y de marca, no los especializados.",
+        "question": "¿Cuáles son los topes de viáticos para un viaje nacional?",
+        "answer": "En viajes nacionales los topes son: alojamiento máximo $450.000 COP por noche, alimentación máximo $150.000 COP por día y transporte terrestre local máximo $120.000 COP por día.",
+        "type": "política",
+        "source": "politica_gastos.md, sección 4"
+    },
+    {
+        "question": "¿Qué condiciones de pago y calificación tiene el proveedor NubeAndina Cloud?",
+        "answer": "NubeAndina Cloud S.A.S. tiene condiciones de pago a 30 días y una calificación de desempeño de 4,6. Es un proveedor homologado de infraestructura cloud del área de Tecnología.",
+        "type": "directa",
+        "source": "proveedores.csv, fila 1"
+    },
+    {
+        "question": "¿Cuál es la categoría con mayor gasto en lo corrido de 2026?",
+        "answer": "La categoría con mayor gasto entre enero y septiembre de 2026 es Software y licencias, con $1.887.700.000 COP.",
+        "type": "directa",
+        "source": "resumen_gastos.md, gasto por categoría"
+    },
+    {
+        "question": "¿Cuánto gastó Tecnología en infraestructura cloud en el tercer trimestre de 2026?",
+        "answer": "En el tercer trimestre de 2026 (T3-2026) el área de Tecnología gastó $428.100.000 COP en infraestructura cloud.",
+        "type": "directa",
+        "source": "gastos_por_categoria.csv, fila 43"
+    },
+    {
+        "question": "¿Qué áreas están en alerta presupuestal y qué implica cada alerta según la política de gastos?",
+        "answer": "Marketing está en alerta roja por superar el 90 % de ejecución: solo se aprueban gastos críticos para la operación, con autorización de la Vicepresidencia Administrativa y Financiera. Siniestros e Indemnizaciones está en alerta amarilla por superar el 80 %: cada gasto nuevo superior a $5.000.000 COP requiere visto bueno adicional de la Dirección Administrativa y Financiera.",
         "type": "multi-documento",
-        "source": "Benefit_Options.pdf, p. 3"
+        "source": "resumen_gastos.md; politica_gastos.md, sección 9"
     },
     {
-        "question": "¿Cuál es el procedimiento para tomar una licencia por maternidad?",
-        "answer": "Los documentos no contienen información sobre el procedimiento para solicitar una licencia por maternidad, por lo que el asistente debe indicar que no tiene información suficiente para responder.",
-        "type": "sin respuesta",
-        "source": "No aparece en ningún documento"
+        "question": "¿Qué proveedores no homologados han recibido pagos que incumplen la política de gastos?",
+        "answer": "La política exige que las compras superiores a $10.000.000 COP se hagan con proveedores homologados. Incumplen esta regla AjusteRápido S.A.S. ($237.400.000 COP), Creativa Digital S.A.S. ($227.200.000 COP) y Restaurante El Mirador Ejecutivo ($107.300.000 COP).",
+        "type": "multi-documento",
+        "source": "resumen_gastos.md; proveedores.csv; politica_gastos.md, sección 3"
     },
     {
-        "question": "¿Qué responsabilidades tiene un analista de datos según el role library?",
-        "answer": "El role library no incluye el rol de analista de datos, por lo que el asistente debe indicar que no tiene información sobre ese rol.",
+        "question": "¿Cuál es el presupuesto aprobado para el área de Tecnología en 2027?",
+        "answer": "Las fuentes no contienen información sobre el presupuesto de 2027, por lo que el asistente debe indicar que no tiene información suficiente para responder.",
         "type": "sin respuesta",
-        "source": "role_library.pdf no contiene ese rol"
+        "source": "No aparece en ninguna fuente"
     }
 ]
