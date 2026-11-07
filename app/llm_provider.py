@@ -38,7 +38,7 @@ DEFAULT_JUDGE_MODELS = {
 
 DEFAULT_EMBEDDINGS_MODELS = {
     "openai": "text-embedding-ada-002",
-    # Multilingüe: los PDFs están en inglés y las preguntas en español
+    # Multilingüe: funciona bien con documentos y preguntas en español
     "fastembed": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
 }
 

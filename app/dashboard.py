@@ -3,7 +3,7 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import streamlit as st
-st.set_page_config(page_title="Dashboard de Evaluación", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Ritual Seg · Evaluación", page_icon="🛡️", layout="wide")
 
 from app.metrics_ui import render_metrics
 

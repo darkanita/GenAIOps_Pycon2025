@@ -3,8 +3,8 @@
 Versionamiento de prompts con el Prompt Registry de MLflow.
 
 Los archivos de app/prompts/*.txt son la fuente: cada archivo se registra
-como una VERSIÓN del prompt "asistente_rrhh" (PROMPT_NAME). Además:
-  - cada versión recibe un alias con el nombre de su archivo (p. ej. @v1_asistente_rrhh)
+como una VERSIÓN del prompt "asistente_gastos" (PROMPT_NAME). Además:
+  - cada versión recibe un alias con el nombre de su archivo (p. ej. @v1_asistente_gastos)
   - el alias @production apunta a la versión que usa la app por defecto
 
 Uso:
@@ -12,10 +12,10 @@ Uso:
     python -m app.prompt_registry --promote 2        # mueve @production a la versión 2
 
 En el código, un prompt se referencia con una URI:
-    prompts:/asistente_rrhh@production   (alias)
-    prompts:/asistente_rrhh/2            (versión fija)
-    prompts:/asistente_rrhh@latest       (última versión)
-También se acepta el nombre de un archivo local (v1_asistente_rrhh) sin usar el registro.
+    prompts:/asistente_gastos@production   (alias)
+    prompts:/asistente_gastos/2            (versión fija)
+    prompts:/asistente_gastos@latest       (última versión)
+También se acepta el nombre de un archivo local (v1_asistente_gastos) sin usar el registro.
 """
 
 import argparse
@@ -26,7 +26,7 @@ import mlflow
 from mlflow import MlflowClient
 
 PROMPT_DIR = "app/prompts"
-PROMPT_NAME = os.getenv("PROMPT_NAME", "asistente_rrhh")
+PROMPT_NAME = os.getenv("PROMPT_NAME", "asistente_gastos")
 PRODUCTION_ALIAS = "production"
 DEFAULT_PROMPT = f"prompts:/{PROMPT_NAME}@{PRODUCTION_ALIAS}"
 
@@ -96,8 +96,8 @@ def promote(version: int, alias=PRODUCTION_ALIAS, name=PROMPT_NAME):
 
 def resolve_prompt_ref(ref: str) -> str:
     """
-    Convierte un alias en su versión concreta: prompts:/asistente_rrhh@production
-    → prompts:/asistente_rrhh/3. Consulta el registro sin caché, para que una
+    Convierte un alias en su versión concreta: prompts:/asistente_gastos@production
+    → prompts:/asistente_gastos/3. Consulta el registro sin caché, para que una
     promoción (--promote) se note de inmediato. Otras referencias se devuelven igual.
     """
     if not ref.startswith("prompts:/") or "@" not in ref:

@@ -19,6 +19,7 @@ import time
 import mlflow
 import streamlit as st
 
+from app.branding import apply_brand, render_header
 from app.llm_provider import describe
 from app.prompt_registry import DEFAULT_PROMPT, resolve_prompt_ref
 from app.rag_pipeline import (
@@ -30,9 +31,9 @@ from app.tracking import CHAT_EXPERIMENT, init_tracking, log_user_feedback
 
 EVAL_DATASET = "tests/eval_dataset.json"
 FALLBACK_EXAMPLES = [
-    "¿Qué beneficios de salud ofrece la empresa?",
-    "¿Qué incluye el programa PerksPlus?",
-    "¿Cuáles son las responsabilidades de un analista de datos?",
+    "¿Cuánto presupuesto le queda disponible al área de Marketing?",
+    "¿Quién debe aprobar un gasto de 30 millones de pesos?",
+    "¿Cuál es el tope de alojamiento en un viaje nacional?",
 ]
 
 
@@ -74,18 +75,26 @@ def get_example_questions(max_n: int = 4):
 
 # ---------- Utilidades ----------
 
+def _location(meta):
+    """Ubicación legible del fragmento: fila (CSV) o página (PDF). Ambas cuentan desde 0."""
+    if isinstance(meta.get("row"), int):
+        return f"fila {meta['row'] + 1}"
+    if isinstance(meta.get("page"), int):
+        return f"página {meta['page'] + 1}"
+    return None
+
+
 def _format_sources(source_documents):
-    """Agrupa fragmentos por (documento, página) y elimina duplicados."""
+    """Agrupa fragmentos por (documento, ubicación) y elimina duplicados."""
     refs = {}
     for doc in source_documents or []:
         meta = doc.metadata or {}
         name = os.path.basename(meta.get("source", "desconocido"))
-        page = meta.get("page")
-        page = page + 1 if isinstance(page, int) else None  # PyPDFLoader cuenta desde 0
-        key = (name, page)
+        loc = _location(meta)
+        key = (name, loc, None if loc else doc.page_content[:80])  # .md: un ref por fragmento
         if key not in refs:
             refs[key] = doc.page_content.strip()
-    return [{"document": n, "page": p, "snippet": t} for (n, p), t in refs.items()]
+    return [{"document": n, "location": l, "snippet": t} for (n, l, _), t in refs.items()]
 
 
 def _log_feedback(msg, thumbs_up: bool):
@@ -105,8 +114,8 @@ def _render_sources(sources):
         return
     with st.expander(f"📚 Referencias ({len(sources)})"):
         for i, ref in enumerate(sources, 1):
-            page = f" — página {ref['page']}" if ref["page"] else ""
-            st.markdown(f"**{i}. {ref['document']}**{page}")
+            loc = f" — {ref['location']}" if ref.get("location") else ""
+            st.markdown(f"**{i}. {ref['document']}**{loc}")
             snippet = ref["snippet"]
             st.caption(snippet[:400] + ("…" if len(snippet) > 400 else ""))
 
@@ -149,7 +158,7 @@ def render_sidebar():
         help="@alias o versión fija. Registra cambios con `python -m app.prompt_registry`",
     )
     k = st.sidebar.slider("Fragmentos a recuperar (k)", 1, 10, 4,
-                          help="Cuántos fragmentos de los PDFs se envían al LLM como contexto")
+                          help="Cuántos fragmentos de las fuentes (CSV y políticas) se envían al LLM como contexto")
 
     st.sidebar.button("🗑️ Nueva conversación", width="stretch",
                       on_click=_new_conversation)
@@ -159,12 +168,13 @@ def render_sidebar():
 
 # ---------- Chat ----------
 
-def render_chat(title="🤖 Asistente de Recursos Humanos",
-                subtitle="Pregunta sobre beneficios, políticas y roles de Contoso Electronics."):
+def render_chat(title="💼 Asistente de Gestión del Gasto",
+                subtitle="Pregunta sobre presupuesto por área, gastos por categoría, "
+                         "proveedores y la Política de Gastos de Ritual Seg. Cifras en COP."):
+    apply_brand()
     config = render_sidebar()
 
-    st.title(title)
-    st.caption(subtitle)
+    render_header(title, subtitle)
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -202,8 +212,8 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
     with st.chat_message("user", avatar="👤"):
         st.markdown(question)
 
-    with st.chat_message("assistant", avatar="🤖"):
-        with st.spinner("Consultando documentos..."):
+    with st.chat_message("assistant", avatar="🛡️"):
+        with st.spinner("Consultando presupuesto, gastos y política..."):
             history = [(m["question"], m["answer"]) for m in st.session_state.messages]
             start = time.perf_counter()
             try:
@@ -237,5 +247,5 @@ def _render_answer(idx, msg):
 def _render_message(idx, msg):
     with st.chat_message("user", avatar="👤"):
         st.markdown(msg["question"])
-    with st.chat_message("assistant", avatar="🤖"):
+    with st.chat_message("assistant", avatar="🛡️"):
         _render_answer(idx, msg)

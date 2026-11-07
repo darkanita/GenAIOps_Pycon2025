@@ -21,7 +21,7 @@ from mlflow.entities import AssessmentSource, AssessmentSourceType
 
 from app.llm_provider import describe
 
-CHAT_EXPERIMENT = "chatbot_rrhh"
+CHAT_EXPERIMENT = "chatbot_gastos"
 EVAL_EXPERIMENT = "rag_evaluation"
 
 _autolog_enabled = False
@@ -41,7 +41,7 @@ def app_config(prompt_uri: str, k: int) -> dict:
 
 
 def _prompt_label(prompt_uri: str) -> str:
-    """prompts:/asistente_rrhh/2 → asistente_rrhh-v2 ; app/prompts/v1_x.txt → local-v1_x"""
+    """prompts:/asistente_gastos/2 → asistente_gastos-v2 ; app/prompts/v1_x.txt → local-v1_x"""
     if prompt_uri.startswith("prompts:/"):
         return prompt_uri.replace("prompts:/", "").replace("/", "-v")
     return "local-" + os.path.splitext(os.path.basename(prompt_uri))[0]

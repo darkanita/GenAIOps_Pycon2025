@@ -1,0 +1,17 @@
+# Tema corporativo de Ritual Seg: azul y blanco
+[theme]
+base = "light"
+primaryColor = "#0047AB"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#EEF3FB"
+textColor = "#0B1F3A"
+linkColor = "#0047AB"
+borderColor = "#C9D8F0"
+font = "sans-serif"
+
+[theme.sidebar]
+backgroundColor = "#0A2E6E"
+secondaryBackgroundColor = "#123E8A"
+textColor = "#FFFFFF"
+primaryColor = "#7FB2FF"
+borderColor = "#2A5BAE"

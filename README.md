@@ -1,4 +1,4 @@
-# 🤖 Chatbot GenAI - Caso de Estudio Recursos Humanos
+# 🛡️ Agente GenAI de Gestión del Gasto — Ritual Seg
 
 Este proyecto demuestra cómo construir, evaluar y automatizar un chatbot de tipo RAG (Retrieval Augmented Generation) con buenas prácticas de **GenAIOps**.
 
@@ -17,13 +17,23 @@ Este proyecto demuestra cómo construir, evaluar y automatizar un chatbot de tip
 
 ## 🧠 Caso de Estudio
 
-El chatbot responde preguntas sobre beneficios, políticas internas y roles de una empresa ficticia (**Contoso Electronics**), usando como base una colección de documentos PDF internos.
+El agente responde preguntas sobre el **manejo del gasto** de **Ritual Seg S.A.**, una entidad financiera aseguradora colombiana ficticia. Usa como fuente un conjunto de **datos dummy** en `data/gastos/`, con todas las cifras en **pesos colombianos (COP)**:
+
+| Archivo | Contenido |
+|---|---|
+| `presupuesto_por_area.csv` | Presupuesto anual 2026, ejecutado (enero a septiembre), disponible y % de ejecución de las 8 áreas |
+| `gastos_por_categoria.csv` | Gasto por trimestre, área y categoría (software, cloud, peritaje, publicidad, viajes…) |
+| `proveedores.csv` | Proveedores con NIT, categoría, homologación, condiciones de pago, gasto acumulado y calificación |
+| `politica_gastos.md` | Política de Gastos Corporativos: niveles de aprobación, cotizaciones, viáticos, caja menor, reembolsos y alertas |
+| `resumen_gastos.md` | Resumen ejecutivo con totales, rankings y alertas ya calculados |
+
+> ⚠️ Un RAG **recupera fragmentos, no hace cálculos**: si una respuesta exige sumar muchas filas, el agente no la obtiene de forma confiable. Por eso `resumen_gastos.md` trae los agregados ya calculados. Para cálculos libres, el siguiente paso sería un agente con herramientas (por ejemplo, pandas o SQL).
 
 ### ✨ Qué incluye
 
 | Capacidad | Cómo se implementa |
 |---|---|
-| RAG sobre PDFs | LangChain + FAISS, con referencias (documento y página) en cada respuesta |
+| RAG sobre CSV + Markdown | LangChain + FAISS: cada fila de un CSV y cada sección `##` de un `.md` es un fragmento, con referencias (archivo y fila o sección) en cada respuesta |
 | Proveedor configurable | **OpenAI** o **Groq** para el LLM; embeddings de OpenAI o locales con FastEmbed |
 | Versionamiento de prompts | **MLflow Prompt Registry** con alias (`@production`) |
 | Observabilidad | **MLflow Tracing**: cada respuesta es una traza con todos sus pasos |
@@ -31,12 +41,13 @@ El chatbot responde preguntas sobre beneficios, políticas internas y roles de u
 | Feedback humano | 👍/👎 en la app, guardado sobre la traza de cada respuesta |
 | Comparación de versiones | Cada combinación proveedor + modelo + prompt + `k` es una versión de la app en MLflow |
 | CI/CD | GitHub Actions evalúa y aplica un *quality gate* en cada cambio |
+| Identidad visual | Tema azul y blanco de Ritual Seg en `.streamlit/config.toml` y `app/branding.py` |
 
 ### 🗺️ Cómo encajan las piezas
 
 ```mermaid
 flowchart LR
-    PDF[📄 PDFs] -->|"chunks + embeddings"| IDX[(FAISS)]
+    DATA[📊 CSV + 📄 Markdown] -->|"chunks + embeddings"| IDX[(FAISS)]
     TXT[📝 app/prompts/*.txt] -->|"prompt_registry"| PR[(MLflow<br/>Prompt Registry)]
     IDX --> RAG[🧠 Cadena RAG]
     PR -->|"@production"| RAG
@@ -84,7 +95,7 @@ Este recorrido te lleva por todo el repositorio en orden. En cada paso: **haz** 
 python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
 ```
 **Observa:** aparece la carpeta `vectorstore/openai/` o `vectorstore/fastembed/`.
-**Entiende:** los PDFs se dividen en fragmentos (*chunks*), cada fragmento se convierte en un vector (*embedding*) y se guarda en un índice FAISS para buscarlos por similitud.
+**Entiende:** las fuentes de `data/gastos/` se dividen en fragmentos (*chunks*): una fila por fragmento en los CSV y una sección `##` en los Markdown, cada fragmento se convierte en un vector (*embedding*) y se guarda en un índice FAISS para buscarlos por similitud.
 **Lee:** `app/rag_pipeline.py` → `save_vectorstore()` y `app/llm_provider.py` → `get_embeddings()`.
 
 ### Paso 2 · Registrar los prompts y abrir MLflow
@@ -93,22 +104,22 @@ python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
 python -m app.prompt_registry
 mlflow ui --port 5000        # en otra terminal; abre http://localhost:5000
 ```
-**Observa:** la consola muestra `asistente_rrhh v1`, `v2` y `@production → v1`. En MLflow, menú **Prompts** → `asistente_rrhh`: las dos versiones con sus alias.
+**Observa:** la consola muestra `asistente_gastos v1`, `v2` y `@production → v1`. En MLflow, menú **Prompts** → `asistente_gastos`: las dos versiones con sus alias.
 **Entiende:** cada archivo de `app/prompts/` es una **versión** del mismo prompt; el alias `@production` dice cuál usa la app.
 **Lee:** `app/prompts/*.txt` y `app/prompt_registry.py`.
 
-### Paso 3 · Conversar con el chatbot
+### Paso 3 · Conversar con el agente de gastos
 **Haz:**
 ```bash
 streamlit run app/main_interface.py
 ```
 Haz clic en una pregunta de ejemplo, abre **📚 Referencias** y califica la respuesta con 👍 o 👎.
-**Observa:** la respuesta, los documentos y páginas usados, el tiempo de respuesta y, en la barra lateral, el proveedor, el modelo y el **Prompt resuelto** (`asistente_rrhh/1`).
+**Observa:** la respuesta, los archivos y filas usados, el tiempo de respuesta y, en la barra lateral, el proveedor, el modelo y el **Prompt resuelto** (`asistente_gastos/1`).
 **Entiende:** es un RAG: busca los fragmentos más parecidos a la pregunta y se los entrega al LLM junto con el prompt.
 **Lee:** `app/chat_ui.py` → `render_chat()` y `app/rag_pipeline.py` → `build_chain()`.
 
 ### Paso 4 · Inspeccionar la traza de esa respuesta
-**Haz:** en MLflow → **Experiments** → `chatbot_rrhh` → **Traces** → abre la traza más reciente.
+**Haz:** en MLflow → **Experiments** → `chatbot_gastos` → **Traces** → abre la traza más reciente.
 **Observa:** el árbol de pasos (*spans*): reformulación de la pregunta, el **retriever** con los fragmentos que encontró, el prompt final enviado al LLM y su respuesta, con tokens y latencia. En *Assessments* está tu 👍/👎 como `user_feedback`.
 **Entiende:** el **tracing** permite saber *por qué* el bot respondió lo que respondió. Si la respuesta es mala, la traza muestra si falló la búsqueda o el LLM.
 **Lee:** `app/tracking.py`.
@@ -131,7 +142,7 @@ python app/run_eval.py
 ### Paso 7 · Comparar dos versiones del prompt
 **Haz:**
 ```bash
-PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo python app/run_eval.py
+PROMPT_VERSION=prompts:/asistente_gastos@v2_resumido_directo python app/run_eval.py
 streamlit run app/dashboard.py
 ```
 **Observa:** en el dashboard, **Comparación de configuraciones** muestra las dos evaluaciones lado a lado; en **Detalle por pregunta** ves en qué preguntas difieren.
@@ -143,14 +154,14 @@ streamlit run app/dashboard.py
 ```bash
 python -m app.prompt_registry --promote 2
 ```
-**Observa:** en tu siguiente pregunta (puede tardar hasta 30 s en notarse) la barra lateral del chat muestra **Prompt resuelto: `asistente_rrhh/2`**, sin reiniciar ni tocar código. En MLflow → **Prompts**, el alias `@production` ahora está en la v2.
+**Observa:** en tu siguiente pregunta (puede tardar hasta 30 s en notarse) la barra lateral del chat muestra **Prompt resuelto: `asistente_gastos/2`**, sin reiniciar ni tocar código. En MLflow → **Prompts**, el alias `@production` ahora está en la v2.
 **Entiende:** separar *qué versión existe* (registro) de *cuál está en producción* (alias) permite cambiar y revertir de forma segura.
 
 ### Paso 9 · Crear tu propia versión
 **Haz:** crea `app/prompts/v3_mi_prompt.txt` (debe incluir `{question}` y `{context}`), luego:
 ```bash
-python -m app.prompt_registry          # → asistente_rrhh v3 (@v3_mi_prompt)
-PROMPT_VERSION=prompts:/asistente_rrhh/3 python app/run_eval.py
+python -m app.prompt_registry          # → asistente_gastos v3 (@v3_mi_prompt)
+PROMPT_VERSION=prompts:/asistente_gastos/3 python app/run_eval.py
 ```
 **Observa:** la v3 aparece en el registro, en el selector de prompts del chat y en el dashboard junto a las demás.
 **Entiende:** este es el [ciclo de mejora](#-el-ciclo-de-mejora) completo: editar → registrar → evaluar → comparar → promover.
@@ -169,7 +180,7 @@ pytest tests/test_run_eval.py -v
 | Orden | Archivo | Qué aprendes |
 |---|---|---|
 | 1 | `app/llm_provider.py` | Cómo se elige el LLM, los embeddings y el juez según `.env` |
-| 2 | `app/rag_pipeline.py` | Indexación de PDFs y construcción de la cadena RAG |
+| 2 | `app/rag_pipeline.py` | Carga de CSV/Markdown/PDF, indexación y construcción de la cadena RAG |
 | 3 | `app/prompt_registry.py` | Registro, alias y carga de prompts en MLflow |
 | 4 | `app/tracking.py` | Tracing, versiones de la app y feedback |
 | 5 | `app/chat_ui.py` | La interfaz de chat y cómo usa todo lo anterior |
@@ -194,10 +205,12 @@ pytest tests/test_run_eval.py -v
 │   ├── metrics_ui.py             ← vista de métricas (evaluación + feedback)
 │   ├── prompt_registry.py        ← versionamiento de prompts en MLflow
 │   ├── tracking.py               ← tracing, versión de la app y feedback en MLflow
+│   ├── branding.py               ← encabezado y estilos corporativos de Ritual Seg
 │   └── prompts/                  ← fuente de las versiones del prompt
-│       ├── v1_asistente_rrhh.txt
+│       ├── v1_asistente_gastos.txt
 │       └── v2_resumido_directo.txt
-├── data/pdfs/                    ← documentos fuente
+├── data/gastos/                  ← fuentes dummy del agente (CSV + Markdown, COP)
+├── .streamlit/config.toml        ← tema azul y blanco
 ├── tests/
 │   ├── test_run_eval.py
 │   ├── eval_dataset.json         ← dataset de evaluación
@@ -242,7 +255,7 @@ Todo se configura en `.env`, sin tocar código:
 | `EMBEDDINGS_MODEL` | modelo de embeddings | `text-embedding-ada-002` / `paraphrase-multilingual-MiniLM-L12-v2` |
 | `EVAL_MODEL` | juez de `run_eval.py`, formato `proveedor:/modelo` | `openai:/gpt-4o-mini` / `groq:/openai/gpt-oss-20b` |
 | `EVAL_SCORERS` | ejecutar solo algunos jueces, separados por coma | todos |
-| `PROMPT_NAME` | nombre del prompt en el registro | `asistente_rrhh` |
+| `PROMPT_NAME` | nombre del prompt en el registro | `asistente_gastos` |
 | `PROMPT_VERSION` | prompt a usar (ver paso 3) | `prompts:/<PROMPT_NAME>@production` |
 | `RETRIEVER_K` | fragmentos que se envían al LLM en `run_eval.py` | `4` |
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | tamaño y solape de los fragmentos al construir el índice (paso 2) | `512` / `50` |
@@ -265,7 +278,7 @@ GROQ_API_KEY=gsk_xxxxx
 
 ### 2. 🔍 Ingesta y vectorización de documentos
 
-Procesa los PDFs y genera el índice vectorial:
+Procesa las fuentes de `data/gastos/` (o de `DATA_DIR`) y genera el índice vectorial:
 
 ```bash
 python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
@@ -292,12 +305,12 @@ vectordb = load_vectorstore_from_disk()
 
 ### 3. 📝 Versionamiento de prompts (MLflow Prompt Registry)
 
-Los archivos de `app/prompts/` se registran como **versiones** del prompt `asistente_rrhh` en MLflow:
+Los archivos de `app/prompts/` se registran como **versiones** del prompt `asistente_gastos` en MLflow:
 
 ```bash
 python -m app.prompt_registry
-# 📝 v1_asistente_rrhh.txt → asistente_rrhh v1 (@v1_asistente_rrhh)
-# 📝 v2_resumido_directo.txt → asistente_rrhh v2 (@v2_resumido_directo)
+# 📝 v1_asistente_gastos.txt → asistente_gastos v1 (@v1_asistente_gastos)
+# 📝 v2_resumido_directo.txt → asistente_gastos v2 (@v2_resumido_directo)
 # 🚀 @production → v1
 ```
 
@@ -313,17 +326,17 @@ La app referencia el prompt con una URI (variable `PROMPT_VERSION` en `.env`):
 
 | URI | Significado |
 |---|---|
-| `prompts:/asistente_rrhh@production` | la versión que tenga el alias (default) |
-| `prompts:/asistente_rrhh/2` | una versión fija |
-| `prompts:/asistente_rrhh@latest` | la última versión registrada |
-| `v1_asistente_rrhh` | archivo local, sin usar el registro |
+| `prompts:/asistente_gastos@production` | la versión que tenga el alias (default) |
+| `prompts:/asistente_gastos/2` | una versión fija |
+| `prompts:/asistente_gastos@latest` | la última versión registrada |
+| `v1_asistente_gastos` | archivo local, sin usar el registro |
 
 > ⚠️ **¿Cuándo se registra un prompt?**
 > - **Automático** solo la primera vez (si el registro está vacío) y en el CI.
 > - **Manual** cada vez que edites o agregues un `.txt`: ejecuta `python -m app.prompt_registry`. Hasta entonces, la app sigue usando la versión anterior.
 > - **Promover** a producción siempre es manual (`--promote N`), para que ningún cambio llegue a producción sin decidirlo.
 
-En la UI de MLflow (`mlflow ui`) → menú **Prompts** → `asistente_rrhh` puedes ver las versiones, compararlas (diff) y mover alias.
+En la UI de MLflow (`mlflow ui`) → menú **Prompts** → `asistente_gastos` puedes ver las versiones, compararlas (diff) y mover alias.
 
 ---
 
@@ -331,7 +344,7 @@ En la UI de MLflow (`mlflow ui`) → menú **Prompts** → `asistente_rrhh` pued
 
 ```python
 from app.rag_pipeline import build_chain
-chain = build_chain(vectordb, prompt_version="prompts:/asistente_rrhh@production", k=4)
+chain = build_chain(vectordb, prompt_version="prompts:/asistente_gastos@production", k=4)
 ```
 
 - Usa `ConversationalRetrievalChain` con `LangChain` + `OpenAI` o `Groq` (según `LLM_PROVIDER`)
@@ -353,9 +366,9 @@ streamlit run app/main_interface.py
 
 La interfaz de chat incluye:
 - 💡 **Preguntas de ejemplo** (tomadas de `tests/eval_dataset.json`: si cambias de dominio, cambian solas)
-- 📚 **Referencias**: documento, página y fragmento usados para cada respuesta
+- 📚 **Referencias**: archivo, fila (CSV) o sección (Markdown) y fragmento usados para cada respuesta
 - ⚙️ **Panel lateral**: proveedor y modelo activos, selector de prompt del **Prompt Registry** y nº de fragmentos (`k`)
-- 🔭 **Tracing**: cada respuesta queda como una traza en MLflow (experimento `chatbot_rrhh`)
+- 🔭 **Tracing**: cada respuesta queda como una traza en MLflow (experimento `chatbot_gastos`)
 - 👍/👎 **Feedback humano** adjunto a la traza de la respuesta (`mlflow.log_feedback`)
 - ⏱️ **Tiempo de respuesta** por mensaje
 
@@ -381,7 +394,7 @@ Ver [Dónde mirar en la UI de MLflow](#-dónde-mirar-en-la-ui-de-mlflow) para sa
 python app/run_eval.py
 
 # Comparar otra configuración
-PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo RETRIEVER_K=6 python app/run_eval.py
+PROMPT_VERSION=prompts:/asistente_gastos@v2_resumido_directo RETRIEVER_K=6 python app/run_eval.py
 ```
 
 Usa `mlflow.genai.evaluate` con `tests/eval_dataset.json` como ground truth y estos **jueces** (LLM-as-a-judge):
@@ -432,7 +445,7 @@ streamlit run app/dashboard.py
 - CI de evaluación: `.github/workflows/eval.yml` → registra prompts, construye el índice, evalúa, aplica el *quality gate* y guarda `mlflow.db` como artefacto
   - Secrets: `OPENAI_API_KEY` y/o `GROQ_API_KEY`
   - Variables opcionales: `LLM_PROVIDER`, `EVAL_MODEL`, `PROMPT_VERSION` (Settings → Secrets and variables → Actions)
-  - ⚠️ En el CI `mlflow.db` empieza vacío, así que las promociones hechas en tu máquina no existen allí y `@production` apunta a la v1. Para evaluar otro prompt en el CI, define `PROMPT_VERSION` con el alias de su archivo (p. ej. `prompts:/asistente_rrhh@v2_resumido_directo`).
+  - ⚠️ En el CI `mlflow.db` empieza vacío, así que las promociones hechas en tu máquina no existen allí y `@production` apunta a la v1. Para evaluar otro prompt en el CI, define `PROMPT_VERSION` con el alias de su archivo (p. ej. `prompts:/asistente_gastos@v2_resumido_directo`).
 - Test unitarios: `.github/workflows/test.yml`
 
 ---
@@ -454,7 +467,7 @@ pytest tests/test_run_eval.py -v
 
 | Concepto | Qué es aquí |
 |---|---|
-| **Experimento** | Carpeta lógica que agrupa resultados. Hay uno para el chat (`chatbot_rrhh`) y otro para las evaluaciones (`rag_evaluation`). |
+| **Experimento** | Carpeta lógica que agrupa resultados. Hay uno para el chat (`chatbot_gastos`) y otro para las evaluaciones (`rag_evaluation`). |
 | **Run** | Una ejecución con parámetros y métricas. Cada `python app/run_eval.py` crea un run de evaluación. |
 | **Traza** (*trace*) | El registro de **una** pregunta respondida, con sus pasos (*spans*): reformulación, retriever, prompt, LLM, tokens y latencia. |
 | **Assessment / Feedback** | Una calificación adjunta a una traza: el veredicto de un juez (con su razonamiento) o el 👍/👎 de un usuario. |
@@ -468,8 +481,8 @@ Todo vive en `./mlflow.db` (SQLite), en la raíz del repo.
 
 | Dónde | Qué contiene | Lo genera |
 |---|---|---|
-| Prompt Registry → `asistente_rrhh` | Versiones del prompt y sus alias | `python -m app.prompt_registry` |
-| Experimento `chatbot_rrhh` | Una traza por cada pregunta hecha en Streamlit + el 👍/👎 del usuario | La app de Streamlit |
+| Prompt Registry → `asistente_gastos` | Versiones del prompt y sus alias | `python -m app.prompt_registry` |
+| Experimento `chatbot_gastos` | Una traza por cada pregunta hecha en Streamlit + el 👍/👎 del usuario | La app de Streamlit |
 | Experimento `rag_evaluation` | Un run por evaluación (métricas promedio por juez) + una traza por pregunta con el veredicto y razonamiento de cada juez | `python app/run_eval.py` |
 | Experimento `vectorstore_tracking` | Parámetros de cada construcción del índice (chunks, documentos) | `save_vectorstore()` |
 
@@ -493,10 +506,10 @@ flowchart LR
 |---|---|---|
 | 1. Editar | Modifica o crea un `.txt` en `app/prompts/` | Nada todavía |
 | 2. Registrar | `python -m app.prompt_registry` | Nueva versión del prompt (p. ej. v3) con alias por nombre de archivo |
-| 3. Evaluar | `PROMPT_VERSION=prompts:/asistente_rrhh/3 python app/run_eval.py` | Run en `rag_evaluation` con métricas por juez y una traza por pregunta |
+| 3. Evaluar | `PROMPT_VERSION=prompts:/asistente_gastos/3 python app/run_eval.py` | Run en `rag_evaluation` con métricas por juez y una traza por pregunta |
 | 4. Comparar | `streamlit run app/dashboard.py` o `mlflow ui` | Ves la v3 junto a las versiones anteriores |
 | 5. Promover | `python -m app.prompt_registry --promote 3` | El alias `@production` apunta a v3; la app la usa sin cambiar código (se refresca en ~30 s) |
-| 6. Monitorear | Usuarios usan el chat | Trazas en `chatbot_rrhh` enlazadas a la versión de la app, con su 👍/👎 |
+| 6. Monitorear | Usuarios usan el chat | Trazas en `chatbot_gastos` enlazadas a la versión de la app, con su 👍/👎 |
 | 7. Ampliar el dataset | Revisa las respuestas con 👎 en el dashboard y agrégalas a `tests/eval_dataset.json` | La siguiente evaluación cubre esos casos |
 
 El CI (`eval.yml`) repite los pasos 2 y 3 en cada push y bloquea el cambio si no supera el *quality gate*.
@@ -511,8 +524,8 @@ En el menú principal están **Experiments** y **Prompts**. Al abrir un experime
 
 | Quiero ver… | Ve a |
 |---|---|
-| Las versiones del prompt, su diff y alias | Menú **Prompts** → `asistente_rrhh` |
-| Las conversaciones reales y su 👍/👎 | **Experiments** → `chatbot_rrhh` → **Traces** |
+| Las versiones del prompt, su diff y alias | Menú **Prompts** → `asistente_gastos` |
+| Las conversaciones reales y su 👍/👎 | **Experiments** → `chatbot_gastos` → **Traces** |
 | Los pasos de una respuesta (qué recuperó, qué prompt usó) | Cualquier traza → abrir → árbol de *spans* |
 | Las evaluaciones y sus métricas promedio | **Experiments** → `rag_evaluation` → **Evaluation runs** |
 | El veredicto y razonamiento de cada juez por pregunta | **Evaluation runs** → abrir un run, o **Traces** → abrir una traza → *Assessments* |
