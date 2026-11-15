@@ -30,9 +30,9 @@ from app.tracking import CHAT_EXPERIMENT, init_tracking, log_user_feedback
 
 EVAL_DATASET = "tests/eval_dataset.json"
 FALLBACK_EXAMPLES = [
-    "¿Qué beneficios de salud ofrece la empresa?",
-    "¿Qué incluye el programa PerksPlus?",
-    "¿Cuáles son las responsabilidades de un analista de datos?",
+    "¿Qué rendimiento obtuvo la estrategia VWAP en QQQ?",
+    "¿Los retrocesos de Fibonacci funcionan mejor que niveles aleatorios?",
+    "¿Qué es el área de valor en un perfil de volumen?",
 ]
 
 
@@ -159,8 +159,8 @@ def render_sidebar():
 
 # ---------- Chat ----------
 
-def render_chat(title="🤖 Asistente de Recursos Humanos",
-                subtitle="Pregunta sobre beneficios, políticas y roles de Contoso Electronics."):
+def render_chat(title="📈 Asistente de investigación en trading intradía",
+                subtitle="Pregunta sobre VWAP, momentum intradía, fractales, Fibonacci y perfil de volumen, según los papers."):
     config = render_sidebar()
 
     st.title(title)

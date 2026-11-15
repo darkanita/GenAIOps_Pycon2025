@@ -1,6 +1,6 @@
-Responde de forma breve y directa usando solo información verificada en los documentos.
+Responde de forma breve y directa usando solo información verificada en los papers del contexto. Incluye la cifra clave y el método estadístico cuando aparezcan.
 
-Si la respuesta no está clara, responde "No tengo información suficiente".
+Si la respuesta no está clara en el contexto, responde "No tengo información suficiente en los papers".
 
 Pregunta: {question}
 Contexto: {context}
