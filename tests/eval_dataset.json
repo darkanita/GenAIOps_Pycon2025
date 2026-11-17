@@ -1,32 +1,32 @@
 [
     {
-        "question": "¿Qué cubre el plan de beneficios Northwind Health Plus?",
-        "answer": "Northwind Health Plus cubre servicios médicos, de visión y dentales; medicamentos recetados (genéricos, de marca y especializados); salud mental y abuso de sustancias; atención preventiva; y servicios de emergencia, tanto dentro como fuera de la red.",
+        "question": "¿Los precios rebotan más en las zonas de Fibonacci que en zonas elegidas al azar?",
+        "answer": "No. Tsinaslanidis, Guijarro y Voukelatos estiman una regresión logística con intervalos de confianza bootstrap (500 repeticiones) en acciones del Dow Jones, DAX y NASDAQ entre 1968 y 2019. Con zonas de 0 %, 2 % y 4 % la probabilidad de rebote en zonas de Fibonacci es estadísticamente igual a la de zonas no Fibonacci, y con zonas de 6 % es significativamente menor. Una regla de trading basada en zonas de Fibonacci tampoco supera a una basada en zonas aleatorias.",
         "type": "directa",
-        "source": "Benefit_Options.pdf, p. 3"
+        "source": "Tsinaslanidis_Guijarro_Voukelatos_2022_Fibonacci_Retracements.pdf, pp. 12-14 y 21"
     },
     {
-        "question": "¿Qué incluye el programa PerksPlus?",
-        "answer": "PerksPlus permite reembolsar hasta 1000 dólares en actividades de bienestar físico, como membresías de gimnasio, entrenamiento personal, clases de yoga o pilates, equipo deportivo y clases grupales. No cubre gastos no relacionados con actividad física, tratamientos médicos, ni comida o suplementos.",
+        "question": "¿Qué efecto tienen los stop-loss por precio en la ruptura del área de valor según el estudio de futuros E-mini S&P 500?",
+        "answer": "Howard prueba doce distancias de stop y todas empeoran el retorno medio frente a mantener la posición hasta el horizonte de 600 segundos. La selectividad del stop (proporción de operaciones detenidas que habrían sido perdedoras) llega como máximo a 69 % con el stop a 16 ticks del límite, por debajo del umbral de cerca de 75 % necesario para que el stop agregue valor. Un esquema de salidas por tiempo supera a la salida por precio en 11 de 13 meses (prueba de signos, p = 0,02).",
         "type": "directa",
-        "source": "PerksPlus.pdf, pp. 3-4"
+        "source": "Howard_2026_Value_Area_Breakouts_ES.pdf, pp. 1 y 14-18"
     },
     {
-        "question": "¿Qué no cubre el plan Northwind Standard en comparación con Northwind Health Plus?",
-        "answer": "A diferencia de Northwind Health Plus, Northwind Standard no cubre servicios de emergencia, salud mental y abuso de sustancias, ni servicios fuera de la red; además, en medicamentos solo cubre genéricos y de marca, no los especializados.",
+        "question": "¿Las razones entre tendencias sucesivas del Dow Jones se agrupan en números de Fibonacci?",
+        "answer": "No. Batchelor y Ramyar identifican 430 puntos de giro en el Dow Jones (1915-2003) y comparan 16 tipos de razones con 2.000 réplicas de un bootstrap estacionario por bloques. Sin contar la razón 4,236, solo 15 de 144 razones superan el percentil 90, apenas por encima de las 14,4 esperables por azar, y sin un patrón consistente. Concluyen que la idea de que las fracciones redondas y las razones de Fibonacci aparecen en el Dow puede descartarse.",
+        "type": "directa",
+        "source": "Batchelor_Ramyar_2006_Magic_Numbers_Dow.pdf, pp. 25 y 28-33"
+    },
+    {
+        "question": "¿Qué tipo de patrones técnicos resultaron informativos en el estudio de regresión kernel y en qué mercado fue más fuerte la evidencia?",
+        "answer": "Lo, Mamaysky y Wang detectan diez patrones (cabeza y hombros, triángulos, rectángulos, dobles techos y suelos, entre otros) con regresión kernel en acciones de EE. UU. de 1962 a 1996, y comparan la distribución de retornos condicionada al patrón con la incondicional. En NYSE/AMEX la prueba de bondad de ajuste es significativa en 7 de 10 patrones (excepto BBOT, TTOP y DBOT); en Nasdaq los 10 patrones son significativos. Advierten que ser informativo no implica una estrategia rentable.",
+        "type": "directa",
+        "source": "Lo_Mamaysky_Wang_2000_Foundations_Technical_Analysis.pdf, pp. 2 y 24-26"
+    },
+    {
+        "question": "¿Coinciden los estudios de Kempen y Maier-Paape y de Tsinaslanidis et al. sobre los retrocesos de Fibonacci?",
+        "answer": "Sí, ambos concluyen que los niveles de Fibonacci no tienen respaldo estadístico. Kempen y Maier-Paape encuentran que los retrocesos medidos en acciones del S&P 100 y el Eurostoxx 50 siguen una distribución continua, aproximadamente log-normal, sin niveles con gran significancia estadística. Tsinaslanidis et al. encuentran que los precios no rebotan más en zonas de Fibonacci que en zonas aleatorias y que operar esas zonas no supera a operar zonas aleatorias.",
         "type": "multi-documento",
-        "source": "Benefit_Options.pdf, p. 3"
-    },
-    {
-        "question": "¿Cuál es el procedimiento para tomar una licencia por maternidad?",
-        "answer": "Los documentos no contienen información sobre el procedimiento para solicitar una licencia por maternidad, por lo que el asistente debe indicar que no tiene información suficiente para responder.",
-        "type": "sin respuesta",
-        "source": "No aparece en ningún documento"
-    },
-    {
-        "question": "¿Qué responsabilidades tiene un analista de datos según el role library?",
-        "answer": "El role library no incluye el rol de analista de datos, por lo que el asistente debe indicar que no tiene información sobre ese rol.",
-        "type": "sin respuesta",
-        "source": "role_library.pdf no contiene ese rol"
+        "source": "Kempen_MaierPaape_2016_Lognormal_Trend_Data.pdf, pp. 8-9; Tsinaslanidis_Guijarro_Voukelatos_2022_Fibonacci_Retracements.pdf, pp. 2 y 12-14"
     }
 ]
