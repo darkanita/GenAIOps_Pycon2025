@@ -67,7 +67,7 @@ En un Codespace de 2 núcleos conviene correr Streamlit, MLflow y la evaluación
 | Parte del desafío | Estado |
 |---|---|
 | 1. Cambio de dominio | Listo |
-| 2. Dataset de evaluación | En progreso |
+| 2. Dataset de evaluación | 19 preguntas listas (9 directas, 4 multi-documento, 3 sin respuesta, 3 adversarias); falta la primera evaluación |
 | 3. Experimentos | Pendiente |
 | 4. Evaluadores propios | Pendiente |
 | 5. Confianza en el juez | Pendiente |
