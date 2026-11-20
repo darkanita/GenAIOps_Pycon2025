@@ -12,6 +12,7 @@ Este proyecto demuestra cómo construir, evaluar y automatizar un chatbot de tip
 | [🔬 Cómo funciona MLflow](#-cómo-funciona-mlflow-en-este-proyecto) | Conceptos, qué se guarda, ciclo de mejora y guía de la UI |
 | [🛠️ Solución de problemas](#️-solución-de-problemas) | Errores frecuentes |
 | [🎓 Desafío para estudiantes](#-desafío-para-estudiantes) | Retos para practicar |
+| [🆕 Laboratorio MLflow 3.18](labs/mlflow_318/README.md) | Issue Detection, Skill Registry, comparación de evaluaciones y evaluación online |
 
 ---
 
@@ -558,6 +559,19 @@ En el menú principal están **Experiments** y **Prompts**. Al abrir un experime
 | `mlflow ui` no muestra nada | Ejecútalo desde la raíz del repo (donde está `mlflow.db`) o usa `mlflow ui --backend-store-uri sqlite:///mlflow.db`. |
 | El prompt editado no cambia en la app | Registra la nueva versión (`python -m app.prompt_registry`) y, si la quieres en producción, promuévela con `--promote N`. La lista de prompts en la app se refresca cada 30 s. |
 | `test.yml` aparece como *skipped* en GitHub | Es esperado: el *quality gate* real corre en `eval.yml`, después de la evaluación. |
+
+---
+
+## 🆕 Laboratorio: novedades de MLflow 3.18
+
+En [`labs/mlflow_318/`](labs/mlflow_318/README.md) hay un laboratorio paso a paso con las cuatro funciones principales de MLflow 3.18 aplicadas a este chatbot: **Automatic Issue Detection**, **Agent Skill Registry**, **comparación de evaluaciones contra una línea base** (con quality gate en CI) y **evaluación online con scorers de código**. Incluye un agente simulado con fallas sembradas, así que casi todo funciona sin API key.
+
+```bash
+pip install -r labs/mlflow_318/requirements.txt
+./labs/mlflow_318/start_server.sh
+python labs/mlflow_318/paso1_trafico.py
+python labs/mlflow_318/paso2_comparar.py
+```
 
 ---
 
