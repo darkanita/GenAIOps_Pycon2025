@@ -1,0 +1,41 @@
+name: Laboratorio MLflow 3.18 (quality gate)
+
+# Corre el laboratorio con el agente simulado: no necesita API keys.
+on:
+  push:
+    paths:
+      - 'labs/mlflow_318/**'
+      - '.github/workflows/mlflow318-lab.yml'
+  pull_request:
+    paths:
+      - 'labs/mlflow_318/**'
+  workflow_dispatch:
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    env:
+      MLFLOW_TRACKING_URI: sqlite:///mlflow_ci.db
+      MLFLOW_DISABLE_AGENT_HINT: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r labs/mlflow_318/requirements.txt
+
+      - name: v2 debe ser bloqueada (mejora el promedio pero empeora preguntas)
+        run: |
+          if python labs/mlflow_318/paso2_comparar.py --baseline v1 --candidate v2 --gate; then
+            echo "::error::El gate dejó pasar a v2, que tiene regresiones"; exit 1
+          fi
+
+      - name: v3 debe pasar el gate
+        run: python labs/mlflow_318/paso2_comparar.py --baseline v1 --candidate v3 --gate
+
+      - name: Gate en pytest
+        run: pytest labs/mlflow_318/test_gate.py -v
