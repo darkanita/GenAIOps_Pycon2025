@@ -87,10 +87,10 @@ def init_tracking(experiment: str, prompt_uri: str, k: int) -> str:
 def ask(chain, question: str, history: list | None = None, session_id: str | None = None,
         user_id: str | None = None) -> tuple[dict, str]:
     """
-    Llama a la cadena RAG dentro de una traza raíz "asistente_rrhh" que lleva la
+    Llama a la cadena RAG dentro de una traza raíz "hr_assistant" que lleva la
     sesión, el usuario y el entorno. Devuelve (resultado de la cadena, trace_id).
     """
-    with mlflow.start_span(name="asistente_rrhh", span_type=SpanType.AGENT) as span:
+    with mlflow.start_span(name="hr_assistant", span_type=SpanType.AGENT) as span:
         span.set_inputs({"question": question})
         metadata = {k: v for k, v in {"mlflow.trace.session": session_id,
                                       "mlflow.trace.user": user_id}.items() if v}

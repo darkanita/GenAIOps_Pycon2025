@@ -51,6 +51,8 @@ jobs:
       env:
         LLM_PROVIDER: ${{ vars.LLM_PROVIDER || 'openai' }}
         EVAL_MODEL: ${{ vars.EVAL_MODEL }}
+        # es | en: idioma del prompt, del dataset y del juez de idioma / prompt, dataset and language judge
+        APP_LANG: ${{ vars.APP_LANG || 'es' }}
         PROMPT_VERSION: ${{ vars.PROMPT_VERSION }}
         # Opcional: compara contra esta versión (p. ej. prompts:/asistente_rrhh@production)
         BASELINE_PROMPT_VERSION: ${{ vars.BASELINE_PROMPT_VERSION }}

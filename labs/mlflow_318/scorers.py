@@ -1,111 +1,114 @@
 # labs/mlflow_318/scorers.py
 """
-Scorers basados en código (sin LLM, sin costo, deterministas).
+Code-based scorers (no LLM, no cost, deterministic). They work for answers in
+Spanish and in English.
 
-⚠️  Regla para la evaluación online (MLflow 3.18): el servidor ejecuta el
-*código fuente* de cada función en un contenedor aislado y sin red. Por eso
-cada scorer hace sus `import` dentro del cuerpo y no usa variables del módulo.
+⚠️  MLflow 3.18 rule for online evaluation: the server runs each function's
+*source code* in an isolated container with no network. That is why every
+scorer does its `import`s inside its body and uses no module-level variables.
 
-    ONLINE_SCORERS   se registran y se activan con .start() sobre trazas nuevas
-                     (no pueden recibir `expectations`)
-    OFFLINE_SCORERS  se usan en mlflow.genai.evaluate (sí reciben `expectations`)
+    ONLINE_SCORERS   registered and turned on with .start() for new traces
+                     (they cannot take `expectations`)
+    OFFLINE_SCORERS  used in mlflow.genai.evaluate (they can take `expectations`)
 """
 
 from mlflow.genai.scorers import scorer
 
 
 # ---------------------------------------------------------------------------
-# Scorers de calidad que funcionan en línea y fuera de línea
+# Quality scorers that work online and offline
 # ---------------------------------------------------------------------------
 @scorer
-def respuesta_concisa(outputs) -> bool:
-    """La respuesta tiene como máximo 100 palabras."""
+def concise_answer(outputs) -> bool:
+    """The answer has at most 100 words."""
     return len(str(outputs).split()) <= 100
 
 
 @scorer
-def cita_fuente(outputs) -> bool:
-    """La respuesta indica el documento de donde sale (p. ej. 'Fuente: PerksPlus.pdf, p. 3')."""
+def cites_source(outputs) -> bool:
+    """The answer names the document it comes from ('Source: PerksPlus.pdf, p. 3' / 'Fuente: ...')."""
     import re
 
-    texto = str(outputs)
-    abstiene = "no tengo información" in texto.lower()
-    return abstiene or bool(re.search(r"Fuente:\s*\S+\.pdf", texto))
+    text = str(outputs)
+    abstains = any(m in text.lower() for m in ("no tengo información", "do not have enough information"))
+    return abstains or bool(re.search(r"(Fuente|Source):\s*\S+\.pdf", text))
 
 
 @scorer
-def sin_datos_personales(outputs) -> bool:
-    """La respuesta no repite correos ni teléfonos."""
+def no_personal_data(outputs) -> bool:
+    """The answer does not echo email addresses or phone numbers."""
     import re
 
     return not re.search(r"[\w.+-]+@[\w-]+\.[\w.]+|\+?\d[\d\s-]{7,}\d", str(outputs))
 
 
 @scorer
-def herramientas_sin_error(trace) -> bool:
-    """Ningún paso de la traza (retriever, herramienta, LLM) terminó en error."""
+def no_tool_errors(trace) -> bool:
+    """No step of the trace (retriever, tool, LLM) ended in error."""
     return all("ERROR" not in str(span.status.status_code) for span in trace.data.spans)
 
 
 @scorer
-def longitud_respuesta(outputs) -> int:
-    """Número de palabras (menos es mejor: úsalo con greater_is_better=False)."""
+def answer_length(outputs) -> int:
+    """Number of words (lower is better: use it with greater_is_better=False)."""
     return len(str(outputs).split())
 
 
 # ---------------------------------------------------------------------------
-# Scorer de sesión: evalúa la conversación completa (todas sus trazas)
+# Session-level scorer: judges the whole conversation (all of its traces)
 # ---------------------------------------------------------------------------
 @scorer
-def sesion_sin_fallas(session):
-    """La conversación no tuvo pasos con error ni respuestas de disculpa."""
+def session_without_failures(session):
+    """The conversation had no failing steps and no apology answers."""
     from mlflow.entities import Feedback
 
-    fallidas = []
-    for t in session:
-        error = any("ERROR" in str(s.status.status_code) for s in t.data.spans)
-        if error or "lo siento" in str(t.data.response or "").lower():
-            fallidas.append(t.info.trace_id)
+    failed = []
+    for tr in session:
+        error = any("ERROR" in str(s.status.status_code) for s in tr.data.spans)
+        response = str(tr.data.response or "").lower()
+        if error or "lo siento" in response or "sorry" in response:
+            failed.append(tr.info.trace_id)
     return Feedback(
-        value=not fallidas,
-        rationale=(f"{len(session)} turnos; con fallas: {fallidas}" if fallidas
-                   else f"{len(session)} turnos sin fallas"),
+        value=not failed,
+        rationale=(f"{len(session)} turns; with failures: {failed}" if failed
+                   else f"{len(session)} turns without failures"),
     )
 
 
 # ---------------------------------------------------------------------------
-# Scorers que comparan contra la respuesta esperada (solo offline)
+# Scorers that compare against the expected answer (offline only)
 # ---------------------------------------------------------------------------
 @scorer
-def cubre_palabras_clave(outputs, expectations) -> float:
-    """Fracción de los datos clave esperados que aparecen en la respuesta."""
+def covers_key_facts(outputs, expectations) -> float:
+    """Fraction of the expected key facts that appear in the answer."""
     import re
     import unicodedata
 
-    def norm(t):
-        t = unicodedata.normalize("NFKD", str(t).lower())
-        return "".join(c for c in t if not unicodedata.combining(c))
+    def norm(text):
+        text = unicodedata.normalize("NFKD", str(text).lower())
+        return "".join(c for c in text if not unicodedata.combining(c))
 
-    claves = expectations.get("palabras_clave") or []
-    if not claves:
+    facts = expectations.get("key_facts") or []
+    if not facts:
         return 1.0
-    texto = norm(outputs)
-    encontradas = [c for c in claves if re.search(rf"\b{re.escape(norm(c))}", texto)]
-    return len(encontradas) / len(claves)
+    text = norm(outputs)
+    found = [f for f in facts if re.search(rf"\b{re.escape(norm(f))}", text)]
+    return len(found) / len(facts)
 
 
 @scorer
-def abstencion_correcta(outputs, expectations) -> bool:
-    """Se abstiene cuando la pregunta está fuera de alcance, y responde cuando no."""
-    abstiene = "no tengo información" in str(outputs).lower()
-    return abstiene == bool(expectations.get("debe_abstenerse"))
+def correct_abstention(outputs, expectations) -> bool:
+    """Abstains when the question is out of scope, and answers when it is not."""
+    text = str(outputs).lower()
+    abstains = any(m in text for m in ("no tengo información", "do not have enough information"))
+    return abstains == bool(expectations.get("should_abstain"))
 
 
-ONLINE_SCORERS = [respuesta_concisa, cita_fuente, sin_datos_personales,
-                  herramientas_sin_error, sesion_sin_fallas]
-OFFLINE_SCORERS = [respuesta_concisa, cita_fuente, sin_datos_personales,
-                   herramientas_sin_error, longitud_respuesta,
-                   cubre_palabras_clave, abstencion_correcta]
+ONLINE_SCORERS = [concise_answer, cites_source, no_personal_data,
+                  no_tool_errors, session_without_failures]
+OFFLINE_SCORERS = [concise_answer, cites_source, no_personal_data,
+                   no_tool_errors, answer_length,
+                   covers_key_facts, correct_abstention]
 
-# Para compare_evaluations: en estos scorers un valor MENOR es mejor
-GREATER_IS_BETTER = {"longitud_respuesta": False}
+# For compare_evaluations: a LOWER value is better for these scorers
+GREATER_IS_BETTER = {"answer_length": False}

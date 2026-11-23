@@ -1,43 +1,50 @@
 #!/usr/bin/env bash
 # labs/mlflow_318/start_server.sh
-# Servidor MLflow 3.18 self-hosted para el laboratorio:
-#   - backend SQLite (Issue Detection y la evaluación online necesitan base de datos)
-#   - ejecución de jobs en segundo plano + tareas periódicas (detección programada)
-#   - scorers de código en contenedores Docker (evaluación online)
+# Self-hosted MLflow 3.18 server for the lab / Servidor MLflow 3.18 para el laboratorio:
+#   - SQLite backend (Issue Detection and online evaluation need a database)
+#   - background job execution + periodic tasks (scheduled detection)
+#   - code-based scorers in Docker containers (online evaluation)
 #
-# Uso:
-#   ./labs/mlflow_318/start_server.sh             # con Docker (todo el laboratorio)
-#   ./labs/mlflow_318/start_server.sh --no-docker # sin Docker (todo menos el paso 3)
+# Usage / Uso:
+#   ./labs/mlflow_318/start_server.sh             # with Docker (the whole lab)
+#   ./labs/mlflow_318/start_server.sh --no-docker # without Docker (everything but step 3)
 set -euo pipefail
 
-cd "$(dirname "$0")/../.."          # raíz del repositorio
+cd "$(dirname "$0")/../.."          # repo root / raíz del repositorio
+# Language from the environment or .env (es | en) / Idioma desde el entorno o .env
+LANG_APP="${APP_LANG:-$(grep -E '^APP_LANG=' .env 2>/dev/null | cut -d= -f2)}"
+msg() { if [[ "${LANG_APP:-es}" == en* ]]; then echo "$2"; else echo "$1"; fi; }
 PORT="${PORT:-5000}"
 DB="${MLFLOW_LAB_DB:-sqlite:///mlflow_lab318.db}"
 
 export MLFLOW_DISABLE_AGENT_HINT=1
-export MLFLOW_SERVER_ENABLE_JOB_EXECUTION=true        # jobs en segundo plano (issue detection)
-export MLFLOW_SERVER_JOB_ENABLE_PERIODIC_TASKS=true   # detección programada (diaria/semanal)
+export MLFLOW_SERVER_ENABLE_JOB_EXECUTION=true        # background jobs (issue detection)
+export MLFLOW_SERVER_JOB_ENABLE_PERIODIC_TASKS=true   # scheduled detection (daily/weekly)
 
 if [[ "${1:-}" != "--no-docker" ]]; then
   if ! docker info >/dev/null 2>&1; then
-    echo "❌ Docker no está disponible. Inícialo o usa: $0 --no-docker"; exit 1
+    msg "❌ Docker no está disponible. Inícialo o usa: $0 --no-docker" \
+        "❌ Docker is not available. Start it or use: $0 --no-docker"; exit 1
   fi
   export MLFLOW_SERVER_ENABLE_CUSTOM_SCORERS=true
   export MLFLOW_SERVER_JOB_EXECUTION_ENGINE=executor
   export MLFLOW_JOB_CUSTOM_SCORER_EXECUTOR_BACKEND=docker
-  # Sin MLFLOW_JOB_IMAGE, MLflow construye al arrancar una imagen mínima con tu versión de
-  # Python y de MLflow (necesita descargar python:<versión>-slim). Si defines MLFLOW_JOB_IMAGE,
-  # la imagen debe existir localmente o poder descargarse (docker pull).
-  # macOS + Colima: Docker solo ve tu home, así que el TMPDIR del servidor debe estar ahí
+  # Without MLFLOW_JOB_IMAGE, MLflow builds a minimal image with your Python and MLflow
+  # versions at startup (it pulls python:<version>-slim). If you set MLFLOW_JOB_IMAGE, the
+  # image must exist locally or be pullable (docker pull).
+  # macOS + Colima: Docker only sees your home, so the server's TMPDIR must live there
   if [[ "$(uname)" == "Darwin" ]]; then
     mkdir -p "$HOME/mlflow-tmp"; export TMPDIR="$HOME/mlflow-tmp"
   fi
-  echo "🐳 Scorers de código en contenedores (imagen: ${MLFLOW_JOB_IMAGE:-construida por MLflow})"
+  msg "🐳 Scorers de código en contenedores (imagen: ${MLFLOW_JOB_IMAGE:-construida por MLflow})" \
+      "🐳 Code-based scorers in containers (image: ${MLFLOW_JOB_IMAGE:-built by MLflow})"
 else
-  echo "⚠️  Sin Docker: la evaluación online con scorers de código (paso 3) queda desactivada"
+  msg "⚠️  Sin Docker: la evaluación online con scorers de código (paso 3) queda desactivada" \
+      "⚠️  No Docker: online evaluation with code-based scorers (step 3) is disabled"
 fi
 
-echo "🚀 MLflow en http://localhost:${PORT}  (backend: ${DB})"
+msg "🚀 MLflow en http://localhost:${PORT}  (backend: ${DB})" \
+    "🚀 MLflow at http://localhost:${PORT}  (backend: ${DB})"
 exec mlflow server \
   --backend-store-uri "$DB" \
   --artifacts-destination ./mlartifacts \

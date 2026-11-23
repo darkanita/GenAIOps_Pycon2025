@@ -5,6 +5,7 @@ from langchain.globals import set_verbose, get_verbose
 
 set_verbose(True)  # Si quieres ver logs detallados
 
+from app.i18n import t
 from app.llm_provider import get_llm, get_embeddings, get_vectorstore_dir, describe
 from app.prompt_registry import DEFAULT_PROMPT, load_prompt_text, list_prompt_options
 
@@ -65,10 +66,7 @@ def load_vectorstore(chunk_size=512, chunk_overlap=50):
 
 def load_vectorstore_from_disk(persist_path=VECTOR_DIR):
     if not os.path.exists(persist_path):
-        raise FileNotFoundError(
-            f"No existe el índice en '{persist_path}'. Genéralo primero con: "
-            'python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"'
-        )
+        raise FileNotFoundError(t("rag.no_index", path=persist_path))
     embeddings = get_embeddings()
     return FAISS.load_local(persist_path, embeddings, allow_dangerous_deserialization=True)
 

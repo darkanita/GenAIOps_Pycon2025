@@ -20,6 +20,7 @@ import uuid
 
 import streamlit as st
 
+from app.i18n import by_lang, t
 from app.llm_provider import describe
 from app.prompt_registry import DEFAULT_PROMPT, resolve_prompt_ref
 from app.rag_pipeline import (
@@ -29,22 +30,25 @@ from app.rag_pipeline import (
 )
 from app.tracking import CHAT_EXPERIMENT, ask, init_tracking, log_user_feedback
 
-EVAL_DATASET = "tests/eval_dataset.json"
-FALLBACK_EXAMPLES = [
-    "¿Qué beneficios de salud ofrece la empresa?",
-    "¿Qué incluye el programa PerksPlus?",
-    "¿Cuáles son las responsabilidades de un analista de datos?",
-]
+EVAL_DATASET = by_lang("tests/eval_dataset.json", "tests/eval_dataset.en.json")
+FALLBACK_EXAMPLES = by_lang(
+    ["¿Qué beneficios de salud ofrece la empresa?",
+     "¿Qué incluye el programa PerksPlus?",
+     "¿Cuáles son las responsabilidades de un analista de datos?"],
+    ["What health benefits does the company offer?",
+     "What does the PerksPlus program include?",
+     "What are the responsibilities of a data analyst?"],
+)
 
 
 # ---------- Recursos cacheados ----------
 
-@st.cache_resource(show_spinner="Cargando índice vectorial...")
+@st.cache_resource(show_spinner=t("chat.loading_index"))
 def get_vectordb():
     return load_vectorstore_from_disk()
 
 
-@st.cache_resource(show_spinner="Preparando el asistente...")
+@st.cache_resource(show_spinner=t("chat.preparing"))
 def get_chain(prompt_version: str, k: int):
     chain = build_chain(get_vectordb(), prompt_version=prompt_version, k=k)
     prompt_uri = chain.combine_docs_chain.llm_chain.prompt.metadata["prompt_uri"]
@@ -80,7 +84,7 @@ def _format_sources(source_documents):
     refs = {}
     for doc in source_documents or []:
         meta = doc.metadata or {}
-        name = os.path.basename(meta.get("source", "desconocido"))
+        name = os.path.basename(meta.get("source", t("chat.unknown_source")))
         page = meta.get("page")
         page = page + 1 if isinstance(page, int) else None  # PyPDFLoader cuenta desde 0
         key = (name, page)
@@ -91,22 +95,22 @@ def _format_sources(source_documents):
 
 def _log_feedback(msg, thumbs_up: bool):
     if not msg.get("trace_id"):
-        st.warning("Esta respuesta no tiene traza asociada; no se pudo registrar el feedback.")
+        st.warning(t("chat.no_trace"))
         return False
     try:
         log_user_feedback(msg["trace_id"], thumbs_up)
         return True
     except Exception as e:  # el feedback nunca debe tumbar la app
-        st.warning(f"No se pudo registrar el feedback en MLflow: {e}")
+        st.warning(t("chat.feedback_error", error=e))
         return False
 
 
 def _render_sources(sources):
     if not sources:
         return
-    with st.expander(f"📚 Referencias ({len(sources)})"):
+    with st.expander(t("chat.references", n=len(sources))):
         for i, ref in enumerate(sources, 1):
-            page = f" — página {ref['page']}" if ref["page"] else ""
+            page = t("chat.page", page=ref["page"]) if ref["page"] else ""
             st.markdown(f"**{i}. {ref['document']}**{page}")
             snippet = ref["snippet"]
             st.caption(snippet[:400] + ("…" if len(snippet) > 400 else ""))
@@ -135,7 +139,7 @@ def _new_conversation():
 
 def render_sidebar():
     info = describe()
-    st.sidebar.markdown("### ⚙️ Configuración")
+    st.sidebar.markdown(t("chat.settings"))
     st.sidebar.markdown(
         f"**LLM:** `{info['llm_provider']}` · `{info['llm_model']}`  \n"
         f"**Embeddings:** `{info['embeddings_provider']}` · `{info['embeddings_model'].split('/')[-1]}`"
@@ -146,14 +150,14 @@ def render_sidebar():
     if default not in options:
         options = [default, *options]
     prompt_version = st.sidebar.selectbox(
-        "Prompt (MLflow Prompt Registry)", options, index=options.index(default),
+        t("chat.prompt_label"), options, index=options.index(default),
         format_func=lambda o: o.replace("prompts:/", ""),
-        help="@alias o versión fija. Registra cambios con `python -m app.prompt_registry`",
+        help=t("chat.prompt_help"),
     )
-    k = st.sidebar.slider("Fragmentos a recuperar (k)", 1, 10, 4,
-                          help="Cuántos fragmentos de los PDFs se envían al LLM como contexto")
+    k = st.sidebar.slider(t("chat.k_label"), 1, 10, 4,
+                          help=t("chat.k_help"))
 
-    st.sidebar.button("🗑️ Nueva conversación", width="stretch",
+    st.sidebar.button(t("chat.new_conversation"), width="stretch",
                       on_click=_new_conversation)
 
     return {"prompt_version": prompt_version, "k": k}
@@ -161,8 +165,8 @@ def render_sidebar():
 
 # ---------- Chat ----------
 
-def render_chat(title="🤖 Asistente de Recursos Humanos",
-                subtitle="Pregunta sobre beneficios, políticas y roles de Contoso Electronics."):
+def render_chat(title=None, subtitle=None):
+    title, subtitle = title or t("chat.title"), subtitle or t("chat.subtitle")
     config = render_sidebar()
 
     st.title(title)
@@ -180,14 +184,14 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
         st.stop()
     # Trazas en el experimento del chat, enlazadas a esta versión de la app
     init_tracking(CHAT_EXPERIMENT, prompt_uri, config["k"])
-    st.sidebar.caption(f"Prompt resuelto: `{prompt_uri.replace('prompts:/', '')}`")
+    st.sidebar.caption(t("chat.resolved_prompt", prompt=prompt_uri.replace("prompts:/", "")))
 
     # Preguntas de ejemplo (solo al inicio de la conversación)
     pending = None
     examples_box = st.empty()
     if not st.session_state.messages:
         with examples_box.container():
-            st.markdown("##### 💡 Prueba con alguna de estas preguntas")
+            st.markdown(t("chat.try_these"))
             cols = st.columns(2)
             for i, q in enumerate(get_example_questions()):
                 if cols[i % 2].button(q, key=f"ex_{i}", width="stretch"):
@@ -197,7 +201,7 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
     for idx, msg in enumerate(st.session_state.messages):
         _render_message(idx, msg)
 
-    question = st.chat_input("¿Qué deseas consultar?") or pending
+    question = st.chat_input(t("chat.input")) or pending
     if not question:
         return
 
@@ -207,7 +211,7 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
         st.markdown(question)
 
     with st.chat_message("assistant", avatar="🤖"):
-        with st.spinner("Consultando documentos..."):
+        with st.spinner(t("chat.searching")):
             history = [(m["question"], m["answer"]) for m in st.session_state.messages]
             start = time.perf_counter()
             try:
@@ -215,7 +219,7 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
                                        session_id=st.session_state.session_id,
                                        user_id=os.getenv("APP_USER", "streamlit_user"))
             except Exception as e:
-                st.error(f"Error al consultar el modelo: {e}")
+                st.error(t("chat.model_error", error=e))
                 st.stop()
             latency = time.perf_counter() - start
 
@@ -235,7 +239,7 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
 def _render_answer(idx, msg):
     st.markdown(msg["answer"])
     _render_sources(msg["sources"])
-    st.caption(f"⏱️ {msg['latency']:.1f} s · prompt `{msg['prompt_version']}` · k={msg['k']}")
+    st.caption(t("chat.answer_meta", latency=msg["latency"], prompt=msg["prompt_version"], k=msg["k"]))
     _render_feedback(idx, msg)
 
 

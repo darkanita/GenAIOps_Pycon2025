@@ -20,6 +20,8 @@ import os
 
 from dotenv import load_dotenv
 
+from app.i18n import t
+
 load_dotenv()
 
 DEFAULT_LLM_MODELS = {
@@ -47,7 +49,7 @@ def get_llm_provider() -> str:
     provider = (os.getenv("LLM_PROVIDER") or "openai").strip().lower()
     if provider not in DEFAULT_LLM_MODELS:
         raise ValueError(
-            f"LLM_PROVIDER no soportado: '{provider}'. Usa uno de: {list(DEFAULT_LLM_MODELS)}"
+            t("llm.unsupported", var="LLM_PROVIDER", value=provider, options=list(DEFAULT_LLM_MODELS))
         )
     return provider
 
@@ -57,8 +59,8 @@ def get_embeddings_provider() -> str:
     provider = (os.getenv("EMBEDDINGS_PROVIDER") or default).strip().lower()
     if provider not in DEFAULT_EMBEDDINGS_MODELS:
         raise ValueError(
-            f"EMBEDDINGS_PROVIDER no soportado: '{provider}'. "
-            f"Usa uno de: {list(DEFAULT_EMBEDDINGS_MODELS)}"
+            t("llm.unsupported", var="EMBEDDINGS_PROVIDER", value=provider,
+              options=list(DEFAULT_EMBEDDINGS_MODELS))
         )
     return provider
 
@@ -82,7 +84,7 @@ def get_llm(temperature: float = 0, model: str | None = None):
 
     if provider == "groq":
         if not os.getenv("GROQ_API_KEY"):
-            raise EnvironmentError("Falta GROQ_API_KEY en el entorno o en .env")
+            raise EnvironmentError(t("llm.no_groq_key"))
         from langchain_groq import ChatGroq
         return ChatGroq(model=model, temperature=temperature)
 

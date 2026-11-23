@@ -42,8 +42,9 @@ from mlflow.genai.scorers import (
 )
 
 from app.code_scorers import EVAL_CODE_SCORERS
+from app.i18n import by_lang, t
 from app.llm_provider import describe, get_judge_model_uri
-from app.prompt_registry import DEFAULT_PROMPT
+from app.prompt_registry import DEFAULT_PROMPT, PROMPT_NAME
 from app.rag_pipeline import build_chain, load_vectorstore_from_disk
 from app.tracking import EVAL_EXPERIMENT, app_config, init_tracking
 
@@ -54,7 +55,7 @@ PROMPT_VERSION = os.getenv("PROMPT_VERSION") or DEFAULT_PROMPT
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE") or 512)        # deben coincidir con el índice construido
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP") or 50)
 K = int(os.getenv("RETRIEVER_K") or 4)
-DATASET_PATH = "tests/eval_dataset.json"
+DATASET_PATH = by_lang("tests/eval_dataset.json", "tests/eval_dataset.en.json")
 COMPARISON_PATH = ".eval_comparison.json"   # IDs de la última comparación (los usa el quality gate)
 
 # Paralelismo de MLflow. Por defecto evalúa ~10 filas x 10 jueces a la vez, lo que
@@ -93,16 +94,13 @@ def get_scorers(judge_model: str):
         RetrievalRelevance(model=judge_model),     # ¿los fragmentos recuperados son pertinentes?
         Safety(model=judge_model),                 # ¿contenido dañino u ofensivo?
         Guidelines(
-            name="idioma_espanol",
-            guidelines="La respuesta debe estar escrita en español.",
+            name=by_lang("idioma_espanol", "english_language"),
+            guidelines=t("eval.guideline_language"),
             model=judge_model,
         ),
         Guidelines(
-            name="tono_profesional",
-            guidelines=(
-                "La respuesta debe tener un tono formal y profesional, apropiado "
-                "para un asistente de Recursos Humanos, y no debe inventar políticas."
-            ),
+            name=by_lang("tono_profesional", "professional_tone"),
+            guidelines=t("eval.guideline_tone"),
             model=judge_model,
         ),
         # Scorers de código: deterministas, sin LLM y sin costo (app/code_scorers.py)
@@ -112,8 +110,8 @@ def get_scorers(judge_model: str):
     if selected:
         unknown = set(selected) - {sc.name for sc in scorers}
         if unknown:
-            raise ValueError(f"EVAL_SCORERS desconocidos: {unknown}. "
-                             f"Disponibles: {[sc.name for sc in scorers]}")
+            raise ValueError(t("eval.unknown_scorers", unknown=unknown,
+                               available=[sc.name for sc in scorers]))
         scorers = [sc for sc in scorers if sc.name in selected]
     return scorers
 
@@ -124,7 +122,7 @@ def evaluate_version(prompt_version: str, scorers, judge_model: str, role: str |
     chain = build_chain(vectordb, prompt_version=prompt_version, k=K)
     prompt_uri = chain.combine_docs_chain.llm_chain.prompt.metadata["prompt_uri"]
     model_id = init_tracking(EVAL_EXPERIMENT, prompt_uri, K)
-    print(f"\n⚙️  App: {describe()} | prompt={prompt_uri} | k={K}" + (f" | {role}" if role else ""))
+    print("\n" + t("eval.app", info=describe(), prompt=prompt_uri, k=K) + (f" | {role}" if role else ""))
 
     def predict_fn(question: str) -> str:
         result = chain.invoke({"question": question, "chat_history": []})
@@ -146,10 +144,10 @@ def evaluate_version(prompt_version: str, scorers, judge_model: str, role: str |
             model_id=model_id,
         )
 
-    print("📈 Resultados agregados:")
+    print(t("eval.results"))
     for name, value in sorted(results.metrics.items()):
         print(f"   {name:40s} {value:.2f}" if isinstance(value, (int, float)) else f"   {name}: {value}")
-    print(f"🔎 Detalle por pregunta: mlflow ui → experimento '{EVAL_EXPERIMENT}' → run '{run_name}'")
+    print(t("eval.detail", experiment=EVAL_EXPERIMENT, run=run_name))
     return run.info.run_id, results
 
 
@@ -161,7 +159,7 @@ def compare_with_baseline(baseline_run_id: str, candidate_run_id: str):
         log_results=True,           # queda registrada en el run candidato
     )
     df = comparison.summary()
-    print("\n📊 Candidata vs línea base (prueba pareada por pregunta):")
+    print("\n" + t("eval.compare_header"))
     for _, r in df.iterrows():
         if r["status"] != "ok":
             print(f"   {r['scorer']:28s} {r['status']} (n={r['n_paired']})")
@@ -173,7 +171,7 @@ def compare_with_baseline(baseline_run_id: str, candidate_run_id: str):
     empeoraron = [(row, name, sc) for row in comparison.paired_rows
                   for name, sc in row["scores"].items() if sc["delta"] < 0]
     if empeoraron:
-        print("\n🔻 Preguntas que empeoraron (el promedio no las muestra):")
+        print("\n" + t("eval.regressed_header"))
         for row, name, sc in empeoraron:
             trace = mlflow.get_trace(row["candidate_trace_id"])
             question = (trace.data.spans[0].inputs or {}).get("question", "?")
@@ -185,19 +183,18 @@ def compare_with_baseline(baseline_run_id: str, candidate_run_id: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluación del RAG con jueces de MLflow")
+    parser = argparse.ArgumentParser(description=t("eval.arg_desc"))
     parser.add_argument("--baseline", metavar="PROMPT",
-                        help="evalúa también esta versión y compara contra ella "
-                             "(p. ej. prompts:/asistente_rrhh@production)")
+                        help=t("eval.arg_baseline", example=f"prompts:/{PROMPT_NAME}@production"))
     args = parser.parse_args()
 
     mlflow.set_experiment(EVAL_EXPERIMENT)
     judge_model = get_judge_model_uri()
     scorers = get_scorers(judge_model)
-    print(f"📊 Experimento MLflow: {EVAL_EXPERIMENT}")
-    print(f"⚖️  Juez: {judge_model} | {len(scorers)} scorers: {[sc.name for sc in scorers]}")
+    print(t("eval.experiment", name=EVAL_EXPERIMENT))
+    print(t("eval.judge", model=judge_model, n=len(scorers), names=[sc.name for sc in scorers]))
     if os.getenv("MLFLOW_GENAI_EVAL_MAX_WORKERS") == "1":
-        print("🐢 Modo pausado para respetar los límites del proveedor (puede tardar varios minutos)")
+        print(t("eval.slow_mode"))
 
     if not args.baseline:
         _, results = evaluate_version(PROMPT_VERSION, scorers, judge_model)

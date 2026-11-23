@@ -1,210 +1,222 @@
-# 🤖 Chatbot GenAI - Caso de Estudio Recursos Humanos
+🌐 **English** | [Español](README.es.md)
 
-Este proyecto demuestra cómo construir, evaluar y automatizar un chatbot de tipo RAG (Retrieval Augmented Generation) con buenas prácticas de **GenAIOps**.
+# 🤖 GenAI Chatbot - Human Resources Case Study
 
-**¿Primera vez aquí?** Sigue el [🧭 Recorrido guiado](#-recorrido-guiado-empieza-aquí): en unos 60–90 minutos recorres el repositorio de punta a punta.
+This project shows how to build, evaluate and automate a RAG (Retrieval Augmented Generation) chatbot with **GenAIOps** best practices.
 
-| Sección | Para qué |
+> 🌐 **The whole repo works in English and in Spanish.** Set `APP_LANG=en` in `.env` and the app, console messages, prompt, evaluation dataset and lab are in English; with `APP_LANG=es` (the default) they are in Spanish. This guide uses the English names (`hr_assistant`).
+
+**First time here?** Follow the [🧭 Guided tour](#-guided-tour-start-here): in about 60–90 minutes you go through the repository end to end.
+
+| Section | What for |
 |---|---|
-| [⚡ Inicio rápido](#-inicio-rápido) | Levantar todo con 5 comandos |
-| [🧭 Recorrido guiado](#-recorrido-guiado-empieza-aquí) | Aprender el repositorio paso a paso, con ejercicios |
-| [🚦 Ciclo de vida GenAIOps](#-ciclo-de-vida-genaiops-aplicado) | Referencia de cada etapa y sus comandos |
-| [🔬 Cómo funciona MLflow](#-cómo-funciona-mlflow-en-este-proyecto) | Conceptos, qué se guarda, ciclo de mejora y guía de la UI |
-| [🛠️ Solución de problemas](#️-solución-de-problemas) | Errores frecuentes |
-| [🎓 Desafío para estudiantes](#-desafío-para-estudiantes) | Retos para practicar |
-| [🆕 Novedades de MLflow 3.18](#-novedades-de-mlflow-318-en-este-repo) | Comparación contra línea base, scorers de código, evaluación online, sesiones, issues y skills |
+| [⚡ Quick start](#-quick-start) | Get everything running with 5 commands |
+| [🧭 Guided tour](#-guided-tour-start-here) | Learn the repository step by step, with exercises |
+| [🚦 GenAIOps lifecycle](#-genaiops-lifecycle-applied) | Reference for each stage and its commands |
+| [🔬 How MLflow works here](#-how-mlflow-works-in-this-project) | Concepts, what gets stored, improvement cycle and UI guide |
+| [🛠️ Troubleshooting](#️-troubleshooting) | Common errors |
+| [🎓 Student challenge](#-student-challenge) | Exercises to practice |
+| [🆕 What's new in MLflow 3.18](#-whats-new-in-mlflow-318-in-this-repo) | Baseline comparison, code-based scorers, online evaluation, sessions, issues and skills |
 
 ---
 
-## 🧠 Caso de Estudio
+## 🧠 Case study
 
-El chatbot responde preguntas sobre beneficios, políticas internas y roles de una empresa ficticia (**Contoso Electronics**), usando como base una colección de documentos PDF internos.
+The chatbot answers questions about benefits, internal policies and roles at a fictional company (**Contoso Electronics**), using a collection of internal PDF documents.
 
-### ✨ Qué incluye
+### ✨ What's included
 
-| Capacidad | Cómo se implementa |
+| Capability | How it is implemented |
 |---|---|
-| RAG sobre PDFs | LangChain + FAISS, con referencias (documento y página) en cada respuesta |
-| Proveedor configurable | **OpenAI** o **Groq** para el LLM; embeddings de OpenAI o locales con FastEmbed |
-| Versionamiento de prompts | **MLflow Prompt Registry** con alias (`@production`) |
-| Observabilidad | **MLflow Tracing**: cada respuesta es una traza con todos sus pasos |
-| Evaluación | `mlflow.genai.evaluate` con **jueces LLM** (corrección, alucinación, relevancia, seguridad, guías propias) |
-| Feedback humano | 👍/👎 en la app, guardado sobre la traza de cada respuesta |
-| Comparación de versiones | Cada combinación proveedor + modelo + prompt + `k` es una versión de la app en MLflow |
-| CI/CD | GitHub Actions evalúa y aplica un *quality gate* en cada cambio |
+| RAG over PDFs | LangChain + FAISS, with references (document and page) in every answer |
+| Configurable provider | **OpenAI** or **Groq** for the LLM; OpenAI embeddings or local ones with FastEmbed |
+| Prompt versioning | **MLflow Prompt Registry** with aliases (`@production`) |
+| Observability | **MLflow Tracing**: every answer is a trace with all its steps, grouped by conversation |
+| Evaluation | `mlflow.genai.evaluate` with **LLM judges** (correctness, hallucination, relevance, safety, custom guidelines) and code-based scorers |
+| Human feedback | 👍/👎 in the app, stored on each answer's trace |
+| Version comparison | Each provider + model + prompt + `k` combination is an app version in MLflow; `compare_evaluations` compares them question by question |
+| CI/CD | GitHub Actions evaluates and applies a *quality gate* on every change |
+| Two languages | `APP_LANG=en` or `APP_LANG=es` switches UI, messages, prompt, dataset and lab |
 
-### 🗺️ Cómo encajan las piezas
+### 🗺️ How the pieces fit together
 
 ```mermaid
 flowchart LR
     PDF[📄 PDFs] -->|"chunks + embeddings"| IDX[(FAISS)]
-    TXT[📝 app/prompts/*.txt] -->|"prompt_registry"| PR[(MLflow<br/>Prompt Registry)]
-    IDX --> RAG[🧠 Cadena RAG]
+    TXT[📝 app/prompts/en/*.txt] -->|"prompt_registry"| PR[(MLflow<br/>Prompt Registry)]
+    IDX --> RAG[🧠 RAG chain]
     PR -->|"@production"| RAG
     LLM[🤖 OpenAI / Groq] --> RAG
     RAG --> UI[💬 Streamlit]
-    RAG --> EV[⚖️ run_eval.py<br/>jueces LLM]
-    UI -->|"trazas + 👍/👎"| ML[(MLflow<br/>mlflow.db)]
-    EV -->|"métricas + razonamientos"| ML
+    RAG --> EV[⚖️ run_eval.py<br/>LLM judges]
+    UI -->|"traces + 👍/👎"| ML[(MLflow<br/>mlflow.db)]
+    EV -->|"metrics + rationales"| ML
     ML --> DASH[📈 Dashboard / mlflow ui]
     EV --> CI[🔁 GitHub Actions<br/>quality gate]
 ```
 
-### ⚡ Inicio rápido
+### ⚡ Quick start
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env                    # pon tu OPENAI_API_KEY, o LLM_PROVIDER=groq + GROQ_API_KEY
-python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"   # índice
-python -m app.prompt_registry           # registra los prompts en MLflow
-streamlit run app/main_interface.py     # chatbot + métricas
+cp .env.example .env                    # set APP_LANG=en and your OPENAI_API_KEY, or LLM_PROVIDER=groq + GROQ_API_KEY
+python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"   # index
+python -m app.prompt_registry           # registers the prompts in MLflow
+streamlit run app/main_interface.py     # chatbot + metrics
 ```
 
-Luego, para evaluar y explorar los resultados:
+Then, to evaluate and explore the results:
 
 ```bash
-python app/run_eval.py                  # evaluación con jueces LLM
-mlflow ui --port 5000                   # trazas, prompts, evaluaciones y versiones
+python app/run_eval.py                  # evaluation with LLM judges
+mlflow ui --port 5000                   # traces, prompts, evaluations and versions
 ```
 
-> 🔄 Para entender qué hace MLflow en cada paso y cómo iterar sobre el prompt, ve a [Cómo funciona MLflow en este proyecto](#-cómo-funciona-mlflow-en-este-proyecto).
+> 🔄 To understand what MLflow does at each step and how to iterate on the prompt, see [How MLflow works in this project](#-how-mlflow-works-in-this-project).
 
-> 💻 **GitHub Codespaces**: abre el repo en **Code → Codespaces → Create codespace**. Las dependencias se instalan solas y los puertos `8501` (Streamlit) y `5000` (MLflow) quedan reenviados. Puedes guardar `OPENAI_API_KEY` / `GROQ_API_KEY` como [secrets de Codespaces](https://github.com/settings/codespaces) en lugar de usar `.env`.
+> 💻 **GitHub Codespaces**: open the repo with **Code → Codespaces → Create codespace**. Dependencies install themselves and ports `8501` (Streamlit) and `5000` (MLflow) are forwarded. You can store `OPENAI_API_KEY` / `GROQ_API_KEY` (and `APP_LANG=en`) as [Codespaces secrets](https://github.com/settings/codespaces) instead of using `.env`.
 
 ---
 
-## 🧭 Recorrido guiado (empieza aquí)
+## 🧭 Guided tour (start here)
 
-Este recorrido te lleva por todo el repositorio en orden. En cada paso: **haz** algo, **observa** el resultado, **entiende** el concepto y **lee** el archivo que lo implementa. Necesitas dos terminales: una para la app y otra para MLflow.
+This tour takes you through the whole repository in order. At each step: **do** something, **observe** the result, **understand** the concept and **read** the file that implements it. You need two terminals: one for the app and one for MLflow.
 
-> Antes de empezar: completa la [preparación del entorno](#1--preparación-del-entorno) (instalar dependencias y crear `.env`). Si usas Groq, revisa [Evaluar con el plan gratuito de Groq](#-evaluar-con-el-plan-gratuito-de-groq).
+> Before you start: complete the [environment setup](#1--environment-setup) (install dependencies, create `.env` with `APP_LANG=en`). If you use Groq, check [Evaluating on Groq's free tier](#-evaluating-on-groqs-free-tier).
 
-### Paso 1 · Construir el índice de documentos
-**Haz:**
+### Step 1 · Build the document index
+**Do:**
 ```bash
 python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
 ```
-**Observa:** aparece la carpeta `vectorstore/openai/` o `vectorstore/fastembed/`.
-**Entiende:** los PDFs se dividen en fragmentos (*chunks*), cada fragmento se convierte en un vector (*embedding*) y se guarda en un índice FAISS para buscarlos por similitud.
-**Lee:** `app/rag_pipeline.py` → `save_vectorstore()` y `app/llm_provider.py` → `get_embeddings()`.
+**Observe:** the `vectorstore/openai/` or `vectorstore/fastembed/` folder appears.
+**Understand:** the PDFs are split into *chunks*, each chunk becomes a vector (*embedding*) and is stored in a FAISS index so it can be searched by similarity.
+**Read:** `app/rag_pipeline.py` → `save_vectorstore()` and `app/llm_provider.py` → `get_embeddings()`.
 
-### Paso 2 · Registrar los prompts y abrir MLflow
-**Haz:**
+### Step 2 · Register the prompts and open MLflow
+**Do:**
 ```bash
 python -m app.prompt_registry
-mlflow ui --port 5000        # en otra terminal; abre http://localhost:5000
+mlflow ui --port 5000        # in another terminal; open http://localhost:5000
 ```
-**Observa:** la consola muestra `asistente_rrhh v1`, `v2` y `@production → v1`. En MLflow, menú **Prompts** → `asistente_rrhh`: las dos versiones con sus alias.
-**Entiende:** cada archivo de `app/prompts/` es una **versión** del mismo prompt; el alias `@production` dice cuál usa la app.
-**Lee:** `app/prompts/*.txt` y `app/prompt_registry.py`.
+**Observe:** the console shows `hr_assistant v1`, `v2` and `@production → v1`. In MLflow, **Prompts** menu → `hr_assistant`: both versions with their aliases.
+**Understand:** each file in `app/prompts/en/` is a **version** of the same prompt; the `@production` alias says which one the app uses.
+**Read:** `app/prompts/en/*.txt` and `app/prompt_registry.py`.
 
-### Paso 3 · Conversar con el chatbot
-**Haz:**
+### Step 3 · Chat with the bot
+**Do:**
 ```bash
 streamlit run app/main_interface.py
 ```
-Haz clic en una pregunta de ejemplo, abre **📚 Referencias** y califica la respuesta con 👍 o 👎.
-**Observa:** la respuesta, los documentos y páginas usados, el tiempo de respuesta y, en la barra lateral, el proveedor, el modelo y el **Prompt resuelto** (`asistente_rrhh/1`).
-**Entiende:** es un RAG: busca los fragmentos más parecidos a la pregunta y se los entrega al LLM junto con el prompt.
-**Lee:** `app/chat_ui.py` → `render_chat()` y `app/rag_pipeline.py` → `build_chain()`.
+Click a sample question, open **📚 References** and rate the answer with 👍 or 👎.
+**Observe:** the answer, the documents and pages used, the response time and, in the sidebar, the provider, the model and the **Resolved prompt** (`hr_assistant/1`).
+**Understand:** it is a RAG: it searches for the chunks most similar to the question and hands them to the LLM together with the prompt.
+**Read:** `app/chat_ui.py` → `render_chat()` and `app/rag_pipeline.py` → `build_chain()`.
 
-### Paso 4 · Inspeccionar la traza de esa respuesta
-**Haz:** en MLflow → **Experiments** → `chatbot_rrhh` → **Traces** → abre la traza más reciente.
-**Observa:** el árbol de pasos (*spans*): reformulación de la pregunta, el **retriever** con los fragmentos que encontró, el prompt final enviado al LLM y su respuesta, con tokens y latencia. En *Assessments* está tu 👍/👎 como `user_feedback`.
-**Entiende:** el **tracing** permite saber *por qué* el bot respondió lo que respondió. Si la respuesta es mala, la traza muestra si falló la búsqueda o el LLM.
-**Lee:** `app/tracking.py`.
+### Step 4 · Inspect that answer's trace
+**Do:** in MLflow → **Experiments** → `chatbot_rrhh` → **Traces** → open the most recent trace. Then open **Sessions** to see the whole conversation.
+**Observe:** the tree of steps (*spans*): the `hr_assistant` root with the session, question rephrasing, the **retriever** with the chunks it found, the final prompt sent to the LLM and its answer, with tokens and latency. Your 👍/👎 is under *Assessments* as `user_feedback`.
+**Understand:** **tracing** tells you *why* the bot answered what it answered. If the answer is bad, the trace shows whether the search or the LLM failed.
+**Read:** `app/tracking.py` → `ask()`.
 
-### Paso 5 · Experimentar con la recuperación
-**Haz:** en la barra lateral cambia **Fragmentos a recuperar (k)** a `1` y repite la misma pregunta; luego prueba con `8`.
-**Observa:** cambian las referencias y la respuesta. En **Traces**, cada respuesta queda enlazada a una versión distinta de la app (`...-k1`, `...-k8`), visible en **Agent versions**.
-**Entiende:** la calidad de un RAG depende tanto de *qué se recupera* como del LLM. Cada combinación proveedor + modelo + prompt + k es una **versión de la app** que se puede comparar.
+### Step 5 · Experiment with retrieval
+**Do:** in the sidebar change **Chunks to retrieve (k)** to `1` and repeat the same question; then try `8`.
+**Observe:** the references and the answer change. In **Traces**, each answer is linked to a different app version (`...-k1`, `...-k8`), visible under **Agent versions**.
+**Understand:** a RAG's quality depends on *what gets retrieved* as much as on the LLM. Each provider + model + prompt + k combination is an **app version** you can compare.
 
-### Paso 6 · Evaluar con jueces LLM
-**Haz:**
+### Step 6 · Evaluate with LLM judges
+**Do:**
 ```bash
 python app/run_eval.py
-# Con Groq, para ir más rápido: EVAL_SCORERS=correctness,retrieval_groundedness python app/run_eval.py
+# With Groq, to go faster: EVAL_SCORERS=correctness,retrieval_groundedness python app/run_eval.py
 ```
-**Observa:** la consola muestra el promedio de cada juez (`correctness/mean`, `safety/mean`, …). En MLflow → `rag_evaluation` → **Evaluation runs**, abre el run: cada pregunta con el veredicto y el **razonamiento** de cada juez.
-**Entiende:** en lugar de revisar respuestas a mano, otros LLM las califican contra la respuesta esperada (`tests/eval_dataset.json`) y contra criterios como "no inventar información".
-**Lee:** `app/run_eval.py` → `get_scorers()` y `tests/eval_dataset.json`.
+**Observe:** the console shows each judge's mean (`correctness/mean`, `safety/mean`, …). In MLflow → `rag_evaluation` → **Evaluation runs**, open the run: every question with each judge's verdict and **rationale**.
+**Understand:** instead of reviewing answers by hand, other LLMs grade them against the expected answer (`tests/eval_dataset.en.json`) and against criteria such as "do not make up information".
+**Read:** `app/run_eval.py` → `get_scorers()` and `tests/eval_dataset.en.json`.
 
-### Paso 7 · Comparar dos versiones del prompt
-**Haz:**
+### Step 7 · Compare two prompt versions
+**Do:**
 ```bash
-PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo python app/run_eval.py
+PROMPT_VERSION=prompts:/hr_assistant@v2_short_direct \
+  python app/run_eval.py --baseline prompts:/hr_assistant@production
 streamlit run app/dashboard.py
 ```
-**Observa:** en el dashboard, **Comparación de configuraciones** muestra las dos evaluaciones lado a lado; en **Detalle por pregunta** ves en qué preguntas difieren.
-**Entiende:** así se decide con evidencia qué prompt es mejor, en vez de por intuición.
-**Lee:** `app/metrics_ui.py`.
+**Observe:** the console shows, judge by judge, whether v2 is better or worse than production with a p-value, and lists the questions that got worse. In the dashboard, **Configuration comparison** shows both evaluations side by side.
+**Understand:** this is how you decide with evidence which prompt is better, instead of by intuition. A higher average can hide questions that got worse.
+**Read:** `app/run_eval.py` → `compare_with_baseline()` and `app/metrics_ui.py`.
 
-### Paso 8 · Promover la mejor versión
-**Haz:** si la v2 fue mejor:
+### Step 8 · Promote the best version
+**Do:** if v2 was better:
 ```bash
 python -m app.prompt_registry --promote 2
 ```
-**Observa:** en tu siguiente pregunta (puede tardar hasta 30 s en notarse) la barra lateral del chat muestra **Prompt resuelto: `asistente_rrhh/2`**, sin reiniciar ni tocar código. En MLflow → **Prompts**, el alias `@production` ahora está en la v2.
-**Entiende:** separar *qué versión existe* (registro) de *cuál está en producción* (alias) permite cambiar y revertir de forma segura.
+**Observe:** on your next question (it can take up to 30 s to show) the chat sidebar shows **Resolved prompt: `hr_assistant/2`**, without restarting or touching code. In MLflow → **Prompts**, the `@production` alias is now on v2.
+**Understand:** separating *which version exists* (registry) from *which one is in production* (alias) lets you change and roll back safely.
 
-### Paso 9 · Crear tu propia versión
-**Haz:** crea `app/prompts/v3_mi_prompt.txt` (debe incluir `{question}` y `{context}`), luego:
+### Step 9 · Create your own version
+**Do:** create `app/prompts/en/v3_my_prompt.txt` (it must include `{question}` and `{context}`), then:
 ```bash
-python -m app.prompt_registry          # → asistente_rrhh v3 (@v3_mi_prompt)
-PROMPT_VERSION=prompts:/asistente_rrhh/3 python app/run_eval.py
+python -m app.prompt_registry          # → hr_assistant v3 (@v3_my_prompt)
+PROMPT_VERSION=prompts:/hr_assistant/3 python app/run_eval.py
 ```
-**Observa:** la v3 aparece en el registro, en el selector de prompts del chat y en el dashboard junto a las demás.
-**Entiende:** este es el [ciclo de mejora](#-el-ciclo-de-mejora) completo: editar → registrar → evaluar → comparar → promover.
+**Observe:** v3 shows up in the registry, in the chat's prompt selector and in the dashboard next to the others.
+**Understand:** this is the full [improvement cycle](#-the-improvement-cycle): edit → register → evaluate → compare → promote.
 
-### Paso 10 · El quality gate y la automatización
-**Haz:**
+### Step 10 · The quality gate and automation
+**Do:**
 ```bash
 pytest tests/test_run_eval.py -v
 ```
-**Observa:** el test pasa o falla según la **última** evaluación (`correctness ≥ 0.8`, `safety = 1.0`).
-**Entiende:** en GitHub Actions estos mismos pasos (registrar, indexar, evaluar, verificar) corren en cada push y bloquean cambios que empeoren la calidad.
-**Lee:** `tests/test_run_eval.py` y `.github/workflows/eval.yml`.
+**Observe:** the test passes or fails based on the **latest** evaluation (`correctness ≥ 0.8`, `safety = 1.0`) and, if you ran it with `--baseline`, on whether any judge got significantly worse.
+**Understand:** in GitHub Actions these same steps (register, index, evaluate, check) run on every push and block changes that make quality worse.
+**Read:** `tests/test_run_eval.py` and `.github/workflows/eval.yml`.
 
-### 🗺️ Mapa de archivos: qué leer y en qué orden
+### 🗺️ File map: what to read and in which order
 
-| Orden | Archivo | Qué aprendes |
+| Order | File | What you learn |
 |---|---|---|
-| 1 | `app/llm_provider.py` | Cómo se elige el LLM, los embeddings y el juez según `.env` |
-| 2 | `app/rag_pipeline.py` | Indexación de PDFs y construcción de la cadena RAG |
-| 3 | `app/prompt_registry.py` | Registro, alias y carga de prompts en MLflow |
-| 4 | `app/tracking.py` | Tracing, versiones de la app y feedback |
-| 5 | `app/chat_ui.py` | La interfaz de chat y cómo usa todo lo anterior |
-| 6 | `app/run_eval.py` | Evaluación con jueces LLM |
-| 7 | `app/metrics_ui.py` | Cómo se leen los resultados de MLflow para el dashboard |
-| 8 | `tests/test_run_eval.py` y `.github/workflows/eval.yml` | Quality gate y CI |
+| 1 | `app/llm_provider.py` | How the LLM, embeddings and judge are chosen from `.env` |
+| 2 | `app/rag_pipeline.py` | PDF indexing and building the RAG chain |
+| 3 | `app/prompt_registry.py` | Registering, aliasing and loading prompts in MLflow |
+| 4 | `app/tracking.py` | Tracing, sessions, app versions and feedback |
+| 5 | `app/chat_ui.py` | The chat UI and how it uses everything above |
+| 6 | `app/run_eval.py` and `app/code_scorers.py` | Evaluation with LLM judges and code-based scorers, baseline comparison |
+| 7 | `app/metrics_ui.py` | How MLflow results are read for the dashboard |
+| 8 | `tests/test_run_eval.py` and `.github/workflows/eval.yml` | Quality gate and CI |
+| 9 | `app/i18n.py` | How the repo switches between English and Spanish |
 
-`ui_streamlit.py`, `main_interface.py` y `dashboard.py` son solo puntos de entrada que llaman a `chat_ui.py` y `metrics_ui.py`.
+`ui_streamlit.py`, `main_interface.py` and `dashboard.py` are just entry points that call `chat_ui.py` and `metrics_ui.py`.
 
 ---
 
-## 📂 Estructura del Proyecto
+## 📂 Project structure
 
 ```
 ├── app/
-│   ├── ui_streamlit.py           ← interfaz simple del chatbot
-│   ├── main_interface.py         ← interfaz combinada con métricas
-│   ├── run_eval.py               ← evaluación automática
-│   ├── rag_pipeline.py           ← lógica de ingestión y RAG
-│   ├── llm_provider.py           ← selección de proveedor (OpenAI / Groq)
-│   ├── chat_ui.py                ← componente de chat compartido por las UIs
-│   ├── metrics_ui.py             ← vista de métricas (evaluación + feedback)
-│   ├── prompt_registry.py        ← versionamiento de prompts en MLflow
-│   ├── tracking.py               ← tracing con sesiones, versión de la app y feedback en MLflow
-│   ├── code_scorers.py           ← scorers de código (offline y online)
-│   ├── monitoring.py             ← evaluación online del chat (MLflow 3.18)
-│   └── prompts/                  ← fuente de las versiones del prompt
+│   ├── ui_streamlit.py           ← simple chatbot UI
+│   ├── main_interface.py         ← combined UI with metrics
+│   ├── run_eval.py               ← automatic evaluation
+│   ├── rag_pipeline.py           ← ingestion and RAG logic
+│   ├── llm_provider.py           ← provider selection (OpenAI / Groq)
+│   ├── chat_ui.py                ← chat component shared by the UIs
+│   ├── metrics_ui.py             ← metrics view (evaluation + feedback)
+│   ├── prompt_registry.py        ← prompt versioning in MLflow
+│   ├── tracking.py               ← tracing with sessions, app version and feedback in MLflow
+│   ├── code_scorers.py           ← code-based scorers (offline and online)
+│   ├── monitoring.py             ← online evaluation of the chat (MLflow 3.18)
+│   ├── i18n.py                   ← English and Spanish texts (APP_LANG)
+│   └── prompts/                  ← source of the Spanish prompt versions
 │       ├── v1_asistente_rrhh.txt
-│       └── v2_resumido_directo.txt
-├── data/pdfs/                    ← documentos fuente
+│       ├── v2_resumido_directo.txt
+│       └── en/                   ← source of the English prompt versions (hr_assistant)
+│           ├── v1_hr_assistant.txt
+│           └── v2_short_direct.txt
+├── data/pdfs/                    ← source documents (in English)
 ├── tests/
 │   ├── test_run_eval.py
-│   ├── eval_dataset.json         ← dataset de evaluación
-│   └── eval_dataset.csv
+│   ├── eval_dataset.en.json      ← evaluation dataset (en)
+│   ├── eval_dataset.json         ← evaluation dataset (es)
+│   └── eval_dataset*.csv
 ├── .env.example
 ├── Dockerfile
 ├── .devcontainer/
@@ -213,17 +225,17 @@ pytest tests/test_run_eval.py -v
 │   ├── eval.yml
 │   ├── mlflow318-lab.yml
 │   └── test.yml
-├── labs/mlflow_318/              ← laboratorio de novedades de MLflow 3.18
-├── DESAFIO.md                    ← desafío para estudiantes
-├── vectorstore/                  ← (generado) índices FAISS por proveedor de embeddings
-└── mlflow.db                     ← (generado) base de datos de MLflow: prompts, trazas, evaluaciones
+├── labs/mlflow_318/              ← hands-on lab for MLflow 3.18's new features
+├── CHALLENGE.md                  ← student challenge (in Spanish: DESAFIO.md)
+├── vectorstore/                  ← (generated) FAISS indexes per embeddings provider
+└── mlflow.db                     ← (generated) MLflow database: prompts, traces, evaluations
 ```
 
 ---
 
-## 🚦 Ciclo de vida GenAIOps aplicado
+## 🚦 GenAIOps lifecycle, applied
 
-### 1. 🧱 Preparación del entorno
+### 1. 🧱 Environment setup
 
 ```bash
 git clone https://github.com/darkanita/GenAIOps_Pycon2025 chatbot-genaiops
@@ -231,397 +243,409 @@ cd chatbot-genaiops
 conda create -n chatbot-genaiops python=3.10 -y
 conda activate chatbot-genaiops
 pip install -r requirements.txt
-cp .env.example .env  # Agrega tu API KEY de OpenAI o de Groq
+cp .env.example .env  # set APP_LANG=en and add your OpenAI or Groq API key
 ```
 
-#### 🔀 Elegir proveedor: OpenAI o Groq
+#### 🔀 Choosing a provider: OpenAI or Groq
 
-Todo se configura en `.env`, sin tocar código:
+Everything is configured in `.env`, without touching code:
 
-| Variable | Para qué sirve | Default |
+| Variable | What it does | Default |
 |---|---|---|
-| `LLM_PROVIDER` | proveedor del LLM: `openai` \| `groq` | `openai` |
-| `LLM_MODEL` | modelo de chat | `gpt-4o` (OpenAI) / `openai/gpt-oss-120b` (Groq) |
-| `OPENAI_API_KEY` / `GROQ_API_KEY` | key del proveedor que uses | — |
-| `EMBEDDINGS_PROVIDER` | `openai` \| `fastembed` (local) | `openai` con OpenAI, `fastembed` con Groq |
-| `EMBEDDINGS_MODEL` | modelo de embeddings | `text-embedding-ada-002` / `paraphrase-multilingual-MiniLM-L12-v2` |
-| `EVAL_MODEL` | juez de `run_eval.py`, formato `proveedor:/modelo` | `openai:/gpt-4o-mini` / `groq:/openai/gpt-oss-20b` |
-| `EVAL_SCORERS` | ejecutar solo algunos jueces, separados por coma | todos |
-| `PROMPT_NAME` | nombre del prompt en el registro | `asistente_rrhh` |
-| `PROMPT_VERSION` | prompt a usar (ver paso 3) | `prompts:/<PROMPT_NAME>@production` |
-| `RETRIEVER_K` | fragmentos que se envían al LLM en `run_eval.py` | `4` |
-| `CHUNK_SIZE` / `CHUNK_OVERLAP` | tamaño y solape de los fragmentos al construir el índice (paso 2) | `512` / `50` |
-| `MLFLOW_TRACKING_URI` | servidor de MLflow (opcional) | `./mlflow.db` (SQLite) |
+| `APP_LANG` | language of the app, messages, prompt, dataset and lab: `en` \| `es` | `es` |
+| `LLM_PROVIDER` | LLM provider: `openai` \| `groq` | `openai` |
+| `LLM_MODEL` | chat model | `gpt-4o` (OpenAI) / `openai/gpt-oss-120b` (Groq) |
+| `OPENAI_API_KEY` / `GROQ_API_KEY` | key for the provider you use | — |
+| `EMBEDDINGS_PROVIDER` | `openai` \| `fastembed` (local) | `openai` with OpenAI, `fastembed` with Groq |
+| `EMBEDDINGS_MODEL` | embeddings model | `text-embedding-ada-002` / `paraphrase-multilingual-MiniLM-L12-v2` |
+| `EVAL_MODEL` | judge for `run_eval.py`, `provider:/model` format | `openai:/gpt-4o-mini` / `groq:/openai/gpt-oss-20b` |
+| `EVAL_SCORERS` | run only some judges, comma-separated | all |
+| `PROMPT_NAME` | prompt name in the registry | `hr_assistant` (`asistente_rrhh` with `APP_LANG=es`) |
+| `PROMPT_VERSION` | prompt to use (see step 3) | `prompts:/<PROMPT_NAME>@production` |
+| `RETRIEVER_K` | chunks sent to the LLM in `run_eval.py` | `4` |
+| `CHUNK_SIZE` / `CHUNK_OVERLAP` | chunk size and overlap when building the index (step 2) | `512` / `50` |
+| `MLFLOW_TRACKING_URI` | MLflow server (optional) | `./mlflow.db` (SQLite) |
 
-Las variables que dejes vacías o comentadas toman su valor por defecto.
+Variables you leave empty or commented out take their default value.
 
-**Usar Groq** (obtén tu key en [console.groq.com](https://console.groq.com/keys)):
+**Using Groq** (get your key at [console.groq.com](https://console.groq.com/keys)):
 
 ```env
 LLM_PROVIDER=groq
 GROQ_API_KEY=gsk_xxxxx
 ```
 
-> ℹ️ Groq no ofrece API de embeddings, así que con Groq los embeddings se calculan **localmente** con [FastEmbed](https://github.com/qdrant/fastembed) (CPU, sin API key; el modelo se descarga la primera vez). Si tienes key de OpenAI también puedes combinar `LLM_PROVIDER=groq` con `EMBEDDINGS_PROVIDER=openai`.
+> ℹ️ Groq has no embeddings API, so with Groq the embeddings are computed **locally** with [FastEmbed](https://github.com/qdrant/fastembed) (CPU, no API key; the model downloads the first time). If you also have an OpenAI key you can combine `LLM_PROVIDER=groq` with `EMBEDDINGS_PROVIDER=openai`.
 >
-> El índice FAISS se guarda en `vectorstore/<proveedor_embeddings>/`, así que **al cambiar de proveedor de embeddings debes regenerarlo** (paso 2).
+> The FAISS index is stored in `vectorstore/<embeddings_provider>/`, so **when you change the embeddings provider you must rebuild it** (step 2).
 
 ---
 
-### 2. 🔍 Ingesta y vectorización de documentos
+### 2. 🔍 Document ingestion and vectorization
 
-Procesa los PDFs y genera el índice vectorial:
+Process the PDFs and build the vector index:
 
 ```bash
 python -c "from app.rag_pipeline import save_vectorstore; save_vectorstore()"
 ```
 
-Esto:
-- Divide los documentos en chunks (`CHUNK_SIZE` y `CHUNK_OVERLAP` del `.env`; por defecto 512 y 50)
-- Genera embeddings con OpenAI o FastEmbed (según `EMBEDDINGS_PROVIDER`)
-- Guarda el índice vectorial en `vectorstore/openai/` o `vectorstore/fastembed/`
-- Registra los parámetros en **MLflow**
+This:
+- Splits the documents into chunks (`CHUNK_SIZE` and `CHUNK_OVERLAP` from `.env`; 512 and 50 by default)
+- Builds embeddings with OpenAI or FastEmbed (based on `EMBEDDINGS_PROVIDER`)
+- Saves the vector index in `vectorstore/openai/` or `vectorstore/fastembed/`
+- Logs the parameters to **MLflow**
 
-🔧 Para probar otro chunking, cambia `CHUNK_SIZE`/`CHUNK_OVERLAP` en `.env` y vuelve a construir el índice (también puedes pasarlos directamente):
+🔧 To try a different chunking, change `CHUNK_SIZE`/`CHUNK_OVERLAP` in `.env` and rebuild the index (you can also pass them directly):
 ```python
 save_vectorstore(chunk_size=1024, chunk_overlap=100)
 ```
-> Si cambias el chunking, mantén los mismos valores en `.env` al correr `run_eval.py` para que la evaluación registre la configuración correcta.
+> If you change the chunking, keep the same values in `.env` when running `run_eval.py` so the evaluation logs the right configuration.
 
-♻️ Para reutilizarlo directamente:
+♻️ To reuse it directly:
 ```python
 vectordb = load_vectorstore_from_disk()
 ```
 
 ---
 
-### 3. 📝 Versionamiento de prompts (MLflow Prompt Registry)
+### 3. 📝 Prompt versioning (MLflow Prompt Registry)
 
-Los archivos de `app/prompts/` se registran como **versiones** del prompt `asistente_rrhh` en MLflow:
+The files in `app/prompts/en/` are registered as **versions** of the `hr_assistant` prompt in MLflow (with `APP_LANG=es`, the files in `app/prompts/` become versions of `asistente_rrhh`):
 
 ```bash
 python -m app.prompt_registry
-# 📝 v1_asistente_rrhh.txt → asistente_rrhh v1 (@v1_asistente_rrhh)
-# 📝 v2_resumido_directo.txt → asistente_rrhh v2 (@v2_resumido_directo)
+# 📝 v1_hr_assistant.txt → hr_assistant v1 (@v1_hr_assistant)
+# 📝 v2_short_direct.txt → hr_assistant v2 (@v2_short_direct)
 # 🚀 @production → v1
 ```
 
-- Cada versión guarda su plantilla, un mensaje de commit y la etiqueta `source_file`.
-- Si editas un archivo y vuelves a ejecutar el comando, se crea una **versión nueva** (solo si el contenido cambió).
-- El alias `@production` indica qué versión usa la app. Para promover otra versión **sin tocar código**:
+- Each version stores its template, a commit message and the `source_file` tag.
+- If you edit a file and run the command again, a **new version** is created (only if the content changed).
+- The `@production` alias says which version the app uses. To promote another version **without touching code**:
 
 ```bash
 python -m app.prompt_registry --promote 2
 ```
 
-La app referencia el prompt con una URI (variable `PROMPT_VERSION` en `.env`):
+The app references the prompt with a URI (`PROMPT_VERSION` variable in `.env`):
 
-| URI | Significado |
+| URI | Meaning |
 |---|---|
-| `prompts:/asistente_rrhh@production` | la versión que tenga el alias (default) |
-| `prompts:/asistente_rrhh/2` | una versión fija |
-| `prompts:/asistente_rrhh@latest` | la última versión registrada |
-| `v1_asistente_rrhh` | archivo local, sin usar el registro |
+| `prompts:/hr_assistant@production` | the version holding the alias (default) |
+| `prompts:/hr_assistant/2` | a pinned version |
+| `prompts:/hr_assistant@latest` | the latest registered version |
+| `v1_hr_assistant` | local file, without the registry |
 
-> ⚠️ **¿Cuándo se registra un prompt?**
-> - **Automático** solo la primera vez (si el registro está vacío) y en el CI.
-> - **Manual** cada vez que edites o agregues un `.txt`: ejecuta `python -m app.prompt_registry`. Hasta entonces, la app sigue usando la versión anterior.
-> - **Promover** a producción siempre es manual (`--promote N`), para que ningún cambio llegue a producción sin decidirlo.
+> ⚠️ **When is a prompt registered?**
+> - **Automatically** only the first time (if the registry is empty) and in CI.
+> - **Manually** every time you edit or add a `.txt`: run `python -m app.prompt_registry`. Until then, the app keeps using the previous version.
+> - **Promoting** to production is always manual (`--promote N`), so no change reaches production without a decision.
 
-En la UI de MLflow (`mlflow ui`) → menú **Prompts** → `asistente_rrhh` puedes ver las versiones, compararlas (diff) y mover alias.
+In the MLflow UI (`mlflow ui`) → **Prompts** menu → `hr_assistant` you can see the versions, compare them (diff) and move aliases.
 
 ---
 
-### 4. 🧠 Construcción del pipeline RAG
+### 4. 🧠 Building the RAG pipeline
 
 ```python
 from app.rag_pipeline import build_chain
-chain = build_chain(vectordb, prompt_version="prompts:/asistente_rrhh@production", k=4)
+chain = build_chain(vectordb, prompt_version="prompts:/hr_assistant@production", k=4)
 ```
 
-- Usa `ConversationalRetrievalChain` con `LangChain` + `OpenAI` o `Groq` (según `LLM_PROVIDER`)
-- Devuelve también los documentos fuente (`source_documents`) para mostrar referencias
+- Uses `ConversationalRetrievalChain` with `LangChain` + `OpenAI` or `Groq` (based on `LLM_PROVIDER`)
+- Also returns the source documents (`source_documents`) to show references
 
 ---
 
-### 5. 💬 Interacción vía Streamlit
+### 5. 💬 Interacting through Streamlit
 
-Versión básica:
+Basic version:
 ```bash
 streamlit run app/ui_streamlit.py
 ```
 
-Versión combinada con métricas:
+Combined version with metrics:
 ```bash
 streamlit run app/main_interface.py
 ```
 
-La interfaz de chat incluye:
-- 💡 **Preguntas de ejemplo** (tomadas de `tests/eval_dataset.json`: si cambias de dominio, cambian solas)
-- 📚 **Referencias**: documento, página y fragmento usados para cada respuesta
-- ⚙️ **Panel lateral**: proveedor y modelo activos, selector de prompt del **Prompt Registry** y nº de fragmentos (`k`)
-- 🔭 **Tracing**: cada respuesta queda como una traza en MLflow (experimento `chatbot_rrhh`)
-- 👍/👎 **Feedback humano** adjunto a la traza de la respuesta (`mlflow.log_feedback`)
-- ⏱️ **Tiempo de respuesta** por mensaje
+The chat UI includes:
+- 💡 **Sample questions** (taken from `tests/eval_dataset.en.json`: if you change domain, they change too)
+- 📚 **References**: document, page and chunk used for each answer
+- ⚙️ **Sidebar**: active provider and model, **Prompt Registry** prompt selector and number of chunks (`k`)
+- 🔭 **Tracing**: each answer is a trace in MLflow (`chatbot_rrhh` experiment), grouped by conversation (session)
+- 👍/👎 **Human feedback** attached to the answer's trace (`mlflow.log_feedback`)
+- ⏱️ **Response time** per message
 
 ---
 
-### 6. 🔭 Observabilidad con MLflow Tracing
+### 6. 🔭 Observability with MLflow Tracing
 
-Con `mlflow.langchain.autolog()` cada pregunta genera una **traza** con todos sus pasos: reformulación de la pregunta, fragmentos recuperados por el retriever, prompt final, respuesta del LLM, tokens y latencias.
+With `mlflow.langchain.autolog()` every question produces a **trace** with all its steps: question rephrasing, chunks found by the retriever, final prompt, LLM answer, tokens and latencies. `app/tracking.ask()` wraps it in an `hr_assistant` root span that carries the `session_id`, `user_id` and `environment` (`APP_ENV`).
 
-Además, cada combinación **proveedor + modelo + prompt + k** se registra como una **versión de la app** (`LoggedModel`). Las trazas, el feedback y las evaluaciones quedan enlazadas a ella, así puedes compararlas en la UI de MLflow.
+On top of that, each **provider + model + prompt + k** combination is logged as an **app version** (`LoggedModel`). Traces, feedback and evaluations are linked to it, so you can compare them in the MLflow UI.
 
 ```bash
 mlflow ui --port 5000
 ```
 
-Ver [Dónde mirar en la UI de MLflow](#-dónde-mirar-en-la-ui-de-mlflow) para saber qué encontrar en cada pantalla.
+See [Where to look in the MLflow UI](#-where-to-look-in-the-mlflow-ui) to know what you will find on each screen.
 
 ---
 
-### 7. ⚖️ Evaluación automática con jueces LLM
+### 7. ⚖️ Automatic evaluation with LLM judges
 
 ```bash
 python app/run_eval.py
 
-# Comparar otra configuración
-PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo RETRIEVER_K=6 python app/run_eval.py
+# Evaluate another configuration
+PROMPT_VERSION=prompts:/hr_assistant@v2_short_direct RETRIEVER_K=6 python app/run_eval.py
+
+# Compare it against production, question by question (MLflow 3.18)
+PROMPT_VERSION=prompts:/hr_assistant@v2_short_direct \
+  python app/run_eval.py --baseline prompts:/hr_assistant@production
 ```
 
-Usa `mlflow.genai.evaluate` con `tests/eval_dataset.json` como ground truth y estos **jueces** (LLM-as-a-judge):
+It uses `mlflow.genai.evaluate` with `tests/eval_dataset.en.json` as ground truth and these **judges** (LLM-as-a-judge):
 
-| Juez | Qué evalúa |
+| Judge | What it checks |
 |---|---|
-| `Correctness` | ¿La respuesta coincide con la respuesta esperada? |
-| `RelevanceToQuery` | ¿Responde a lo que se preguntó? |
-| `RetrievalGroundedness` | ¿Está sustentada en los documentos recuperados? (detecta alucinaciones) |
-| `RetrievalRelevance` | ¿Los fragmentos recuperados son pertinentes? |
-| `Safety` | ¿Contiene contenido dañino u ofensivo? |
-| `Guidelines` `idioma_espanol` | ¿Está escrita en español? |
-| `Guidelines` `tono_profesional` | ¿Tono formal y sin inventar políticas? |
-| `respuesta_concisa` *(código)* | ¿Máximo 150 palabras? |
-| `sin_datos_personales` *(código)* | ¿Sin correos ni teléfonos en la respuesta? |
-| `sin_errores` *(código)* | ¿Ningún paso de la traza terminó en error? |
+| `Correctness` | Does the answer match the expected answer? |
+| `RelevanceToQuery` | Does it answer what was asked? |
+| `RetrievalGroundedness` | Is it grounded in the retrieved documents? (detects hallucinations) |
+| `RetrievalRelevance` | Are the retrieved chunks relevant? |
+| `Safety` | Does it contain harmful or offensive content? |
+| `Guidelines` `english_language` | Is it written in English? (`idioma_espanol` with `APP_LANG=es`) |
+| `Guidelines` `professional_tone` | Formal tone, no made-up policies? |
+| `concise_answer` *(code)* | At most 150 words? |
+| `no_personal_data` *(code)* | No emails or phone numbers in the answer? |
+| `no_errors` *(code)* | No trace step ended in error? |
 
-Los tres últimos son **scorers de código** (`app/code_scorers.py`): deterministas, sin LLM y sin costo.
+The last three are **code-based scorers** (`app/code_scorers.py`): deterministic, no LLM, no cost.
 
-- Cada juez deja un **veredicto y su razonamiento** en la traza de cada pregunta.
-- Las métricas agregadas (`correctness/mean`, `safety/mean`, …) quedan en un run del experimento `rag_evaluation`, enlazado a la versión de la app y del prompt.
-- El juez se configura con `EVAL_MODEL` (default: `openai:/gpt-4o-mini` o `groq:/openai/gpt-oss-20b`).
-- Para ahorrar cuota mientras iteras, ejecuta solo algunos jueces:
+- Each judge leaves a **verdict and its rationale** on each question's trace.
+- The aggregated metrics (`correctness/mean`, `safety/mean`, …) go to a run in the `rag_evaluation` experiment, linked to the app version and the prompt version.
+- With `--baseline`, `mlflow.genai.compare_evaluations()` compares both runs with paired tests, prints the diff and p-value per judge and lists the questions that got worse.
+- The judge is set with `EVAL_MODEL` (default: `openai:/gpt-4o-mini` or `groq:/openai/gpt-oss-20b`).
+- To save quota while you iterate, run only some judges:
   ```bash
   EVAL_SCORERS=correctness,retrieval_groundedness python app/run_eval.py
   ```
 
-#### 🐢 Evaluar con el plan gratuito de Groq
+#### 🐢 Evaluating on Groq's free tier
 
-El plan gratuito de Groq limita cada modelo a **30 solicitudes y 8K tokens por minuto, y 200K tokens por día**. Una evaluación completa (10 preguntas × 7 jueces LLM) hace unas 100 llamadas al juez (los scorers de código no consumen cuota); con `--baseline` son el doble, así que:
+Groq's free tier limits each model to **30 requests and 8K tokens per minute, and 200K tokens per day**. A full evaluation (10 questions × 7 LLM judges) makes about 100 judge calls (code-based scorers use no quota); with `--baseline` it is twice that, so:
 
-- Con `LLM_PROVIDER=groq`, `run_eval.py` activa un **modo pausado** automático (1 pregunta y 2 jueces a la vez, ~12 llamadas/min, 8 reintentos ante errores 429). Una evaluación completa tarda **varios minutos**.
-- El juez por defecto (`gpt-oss-20b`) es **distinto del modelo del chat** (`gpt-oss-120b`): en Groq los límites son por modelo, así no compiten por la misma cuota.
-- Los mensajes `Rate-limited (attempt 1/4), retrying...` son normales: MLflow reintenta solo. Solo es un problema si al final aparecen jueces con ⚠️.
-- Si se agota la cuota diaria, usa `EVAL_SCORERS` con menos jueces, prueba otro modelo juez (p. ej. `EVAL_MODEL=groq:/qwen/qwen3.6-27b`) o usa OpenAI como juez (`EVAL_MODEL=openai:/gpt-4o-mini`).
+- With `LLM_PROVIDER=groq`, `run_eval.py` turns on an automatic **throttled mode** (1 question and 2 judges at a time, ~12 calls/min, 8 retries on 429 errors). A full evaluation takes **several minutes**.
+- The default judge (`gpt-oss-20b`) is **different from the chat model** (`gpt-oss-120b`): Groq's limits are per model, so they do not compete for the same quota.
+- `Rate-limited (attempt 1/4), retrying...` messages are normal: MLflow retries on its own. It is only a problem if judges show ⚠️ at the end.
+- If the daily quota runs out, use `EVAL_SCORERS` with fewer judges, try another judge model (e.g. `EVAL_MODEL=groq:/qwen/qwen3.6-27b`) or use OpenAI as the judge (`EVAL_MODEL=openai:/gpt-4o-mini`).
 
 ---
 
-### 8. 📈 Visualización de resultados
+### 8. 📈 Viewing results
 
 ```bash
 streamlit run app/dashboard.py
 ```
 
-- **Comparación de configuraciones**: promedio de cada juez por evaluación, con gráfico seleccionable
-- **Detalle por pregunta**: veredicto (✅/❌) de cada juez y su razonamiento
-- **Feedback de usuarios**: satisfacción por versión de la app y respuestas con 👎 (candidatas para ampliar el dataset de evaluación)
+- **Configuration comparison**: each judge's mean per evaluation, with a selectable chart
+- **Per-question detail**: each judge's verdict (✅/❌) and its rationale
+- **User feedback**: satisfaction per app version and 👎 answers (candidates to grow the evaluation dataset)
 
 ---
 
-### 9. 🔁 Automatización con GitHub Actions
+### 9. 🔁 Automation with GitHub Actions
 
-- CI de evaluación: `.github/workflows/eval.yml` → registra prompts, construye el índice, evalúa, aplica el *quality gate* y guarda `mlflow.db` como artefacto
-  - Secrets: `OPENAI_API_KEY` y/o `GROQ_API_KEY`
-  - Variables opcionales: `LLM_PROVIDER`, `EVAL_MODEL`, `PROMPT_VERSION` (Settings → Secrets and variables → Actions)
-  - ⚠️ En el CI `mlflow.db` empieza vacío, así que las promociones hechas en tu máquina no existen allí y `@production` apunta a la v1. Para evaluar otro prompt en el CI, define `PROMPT_VERSION` con el alias de su archivo (p. ej. `prompts:/asistente_rrhh@v2_resumido_directo`).
-- Test unitarios: `.github/workflows/test.yml`
+- Evaluation CI: `.github/workflows/eval.yml` → registers prompts, builds the index, evaluates, applies the *quality gate* and stores `mlflow.db` as an artifact
+  - Secrets: `OPENAI_API_KEY` and/or `GROQ_API_KEY`
+  - Optional variables: `APP_LANG`, `LLM_PROVIDER`, `EVAL_MODEL`, `PROMPT_VERSION`, `BASELINE_PROMPT_VERSION` (Settings → Secrets and variables → Actions)
+  - ⚠️ In CI `mlflow.db` starts empty, so promotions you made on your machine do not exist there and `@production` points to v1. To evaluate another prompt in CI, set `PROMPT_VERSION` to its file's alias (e.g. `prompts:/hr_assistant@v2_short_direct`).
+- Lab CI: `.github/workflows/mlflow318-lab.yml` → runs the lab's quality gate in English and Spanish, no API keys
+- Unit tests: `.github/workflows/test.yml`
 
 ---
 
-### 10. 🧪 Validación automatizada (quality gate)
+### 10. 🧪 Automated validation (quality gate)
 
 ```bash
 pytest tests/test_run_eval.py -v
 ```
 
-- Verifica que la última evaluación supere los umbrales: `correctness ≥ 0.8` y `safety = 1.0`
-- Ajustables con `MIN_CORRECTNESS` y `MIN_SAFETY`
+- Checks that the latest evaluation clears the thresholds: `correctness ≥ 0.8` and `safety = 1.0`
+- Adjustable with `MIN_CORRECTNESS` and `MIN_SAFETY`
+- If the evaluation ran with `--baseline`, it also fails when a judge got significantly worse than the baseline (`GATE_ALPHA`, default 0.05)
 
 ---
 
-## 🔬 Cómo funciona MLflow en este proyecto
+## 🔬 How MLflow works in this project
 
-### 📖 Conceptos clave
+### 📖 Key concepts
 
-| Concepto | Qué es aquí |
+| Concept | What it is here |
 |---|---|
-| **Experimento** | Carpeta lógica que agrupa resultados. Hay uno para el chat (`chatbot_rrhh`) y otro para las evaluaciones (`rag_evaluation`). |
-| **Run** | Una ejecución con parámetros y métricas. Cada `python app/run_eval.py` crea un run de evaluación. |
-| **Traza** (*trace*) | El registro de **una** pregunta respondida, con sus pasos (*spans*): reformulación, retriever, prompt, LLM, tokens y latencia. |
-| **Assessment / Feedback** | Una calificación adjunta a una traza: el veredicto de un juez (con su razonamiento) o el 👍/👎 de un usuario. |
-| **Juez** (*scorer*) | Función que califica una traza. Puede ser un LLM (`Correctness`, `Guidelines`…) o código Python (`@scorer`). |
-| **Prompt Registry** | Registro de prompts con versiones inmutables (1, 2, 3…) y **alias** movibles (`@production`). |
-| **Versión de la app** (*Agent version* / `LoggedModel`) | Una combinación concreta de proveedor + modelo + prompt + `k`. Trazas y evaluaciones quedan enlazadas a ella para poder comparar. |
+| **Experiment** | Logical folder that groups results. There is one for the chat (`chatbot_rrhh`) and one for evaluations (`rag_evaluation`). |
+| **Run** | One execution with parameters and metrics. Each `python app/run_eval.py` creates an evaluation run. |
+| **Trace** | The record of **one** answered question, with its steps (*spans*): rephrasing, retriever, prompt, LLM, tokens and latency. |
+| **Session** | All the traces of one conversation, linked by `mlflow.trace.session`. |
+| **Assessment / Feedback** | A rating attached to a trace: a judge's verdict (with its rationale) or a user's 👍/👎. |
+| **Judge** (*scorer*) | A function that rates a trace. It can be an LLM (`Correctness`, `Guidelines`…) or Python code (`@scorer`). |
+| **Prompt Registry** | Prompt registry with immutable versions (1, 2, 3…) and movable **aliases** (`@production`). |
+| **App version** (*Agent version* / `LoggedModel`) | A specific provider + model + prompt + `k` combination. Traces and evaluations are linked to it so they can be compared. |
 
-### 🗄️ Qué guarda MLflow y dónde
+### 🗄️ What MLflow stores and where
 
-Todo vive en `./mlflow.db` (SQLite), en la raíz del repo.
+Everything lives in `./mlflow.db` (SQLite), at the repo root.
 
-| Dónde | Qué contiene | Lo genera |
+| Where | What it contains | Created by |
 |---|---|---|
-| Prompt Registry → `asistente_rrhh` | Versiones del prompt y sus alias | `python -m app.prompt_registry` |
-| Experimento `chatbot_rrhh` | Una traza por cada pregunta hecha en Streamlit + el 👍/👎 del usuario | La app de Streamlit |
-| Experimento `rag_evaluation` | Un run por evaluación (métricas promedio por juez) + una traza por pregunta con el veredicto y razonamiento de cada juez | `python app/run_eval.py` |
-| Experimento `vectorstore_tracking` | Parámetros de cada construcción del índice (chunks, documentos) | `save_vectorstore()` |
+| Prompt Registry → `hr_assistant` (`asistente_rrhh` in Spanish) | Prompt versions and their aliases | `python -m app.prompt_registry` |
+| `chatbot_rrhh` experiment | One trace per question asked in Streamlit, grouped by session, + the user's 👍/👎 | The Streamlit app |
+| `rag_evaluation` experiment | One run per evaluation (mean metrics per judge) + one trace per question with each judge's verdict and rationale | `python app/run_eval.py` |
+| `vectorstore_tracking` experiment | Parameters of each index build (chunks, documents) | `save_vectorstore()` |
 
-### 🔄 El ciclo de mejora
+### 🔄 The improvement cycle
 
-Así se usa MLflow para mejorar el chatbot de forma controlada:
+This is how MLflow is used to improve the chatbot in a controlled way:
 
 ```mermaid
 flowchart LR
-    A["1️⃣ Editar prompt<br/>app/prompts/*.txt"] --> B["2️⃣ Registrar versión<br/>prompt_registry"]
-    B --> C["3️⃣ Evaluar<br/>run_eval.py"]
-    C --> D["4️⃣ Comparar<br/>dashboard / mlflow ui"]
-    D -->|mejor| E["5️⃣ Promover<br/>--promote N"]
-    D -->|peor| A
-    E --> F["6️⃣ Usuarios<br/>trazas + 👍/👎"]
-    F --> G["7️⃣ Respuestas con 👎<br/>al dataset de evaluación"]
+    A["1️⃣ Edit prompt<br/>app/prompts/en/*.txt"] --> B["2️⃣ Register version<br/>prompt_registry"]
+    B --> C["3️⃣ Evaluate vs baseline<br/>run_eval.py --baseline"]
+    C --> D["4️⃣ Compare<br/>dashboard / mlflow ui"]
+    D -->|better| E["5️⃣ Promote<br/>--promote N"]
+    D -->|worse| A
+    E --> F["6️⃣ Users<br/>traces + 👍/👎"]
+    F --> G["7️⃣ 👎 answers<br/>into the evaluation dataset"]
     G --> A
 ```
 
-| Paso | Comando | Qué pasa en MLflow |
+| Step | Command | What happens in MLflow |
 |---|---|---|
-| 1. Editar | Modifica o crea un `.txt` en `app/prompts/` | Nada todavía |
-| 2. Registrar | `python -m app.prompt_registry` | Nueva versión del prompt (p. ej. v3) con alias por nombre de archivo |
-| 3. Evaluar | `PROMPT_VERSION=prompts:/asistente_rrhh/3 python app/run_eval.py` | Run en `rag_evaluation` con métricas por juez y una traza por pregunta |
-| 4. Comparar | `streamlit run app/dashboard.py` o `mlflow ui` | Ves la v3 junto a las versiones anteriores |
-| 5. Promover | `python -m app.prompt_registry --promote 3` | El alias `@production` apunta a v3; la app la usa sin cambiar código (se refresca en ~30 s) |
-| 6. Monitorear | Usuarios usan el chat | Trazas en `chatbot_rrhh` enlazadas a la versión de la app, con su 👍/👎 |
-| 7. Ampliar el dataset | Revisa las respuestas con 👎 en el dashboard y agrégalas a `tests/eval_dataset.json` | La siguiente evaluación cubre esos casos |
+| 1. Edit | Change or create a `.txt` in `app/prompts/en/` | Nothing yet |
+| 2. Register | `python -m app.prompt_registry` | New prompt version (e.g. v3) with an alias named after the file |
+| 3. Evaluate | `PROMPT_VERSION=prompts:/hr_assistant/3 python app/run_eval.py --baseline prompts:/hr_assistant@production` | Runs in `rag_evaluation` with metrics per judge, one trace per question and the comparison |
+| 4. Compare | `streamlit run app/dashboard.py` or `mlflow ui` | You see v3 next to previous versions |
+| 5. Promote | `python -m app.prompt_registry --promote 3` | `@production` points to v3; the app uses it without code changes (refreshes in ~30 s) |
+| 6. Monitor | Users use the chat | Traces in `chatbot_rrhh` linked to the app version, with their 👍/👎 |
+| 7. Grow the dataset | Review the 👎 answers in the dashboard and add them to `tests/eval_dataset.en.json` | The next evaluation covers those cases |
 
-El CI (`eval.yml`) repite los pasos 2 y 3 en cada push y bloquea el cambio si no supera el *quality gate*.
+CI (`eval.yml`) repeats steps 2 and 3 on every push and blocks the change if it fails the *quality gate*.
 
-### 🧭 Dónde mirar en la UI de MLflow
+### 🧭 Where to look in the MLflow UI
 
 ```bash
-mlflow ui --port 5000      # desde la raíz del repo (donde está mlflow.db)
+mlflow ui --port 5000      # from the repo root (where mlflow.db lives)
 ```
 
-En el menú principal están **Experiments** y **Prompts**. Al abrir un experimento aparece una barra lateral con estas pantallas:
+The main menu has **Experiments** and **Prompts**. When you open an experiment a sidebar shows these screens:
 
-| Quiero ver… | Ve a |
+| I want to see… | Go to |
 |---|---|
-| Las versiones del prompt, su diff y alias | Menú **Prompts** → `asistente_rrhh` |
-| Las conversaciones reales y su 👍/👎 | **Experiments** → `chatbot_rrhh` → **Traces** |
-| Los pasos de una respuesta (qué recuperó, qué prompt usó) | Cualquier traza → abrir → árbol de *spans* |
-| Las evaluaciones y sus métricas promedio | **Experiments** → `rag_evaluation` → **Evaluation runs** |
-| El veredicto y razonamiento de cada juez por pregunta | **Evaluation runs** → abrir un run, o **Traces** → abrir una traza → *Assessments* |
-| Las versiones de la app (proveedor + modelo + prompt + k) | Dentro de cada experimento → **Agent versions** |
-| Una conversación completa, turno por turno | `chatbot_rrhh` → **Sessions** |
-| Qué preguntas empeoraron frente a la línea base | `rag_evaluation` → **Evaluation runs** → selecciona dos runs → **Compare** |
-| Fallas recurrentes agrupadas, con sus trazas como evidencia | `chatbot_rrhh` → **Issues** → *Run issue detection* (requiere servidor MLflow) |
+| Prompt versions, their diff and aliases | **Prompts** menu → `hr_assistant` |
+| Real conversations and their 👍/👎 | **Experiments** → `chatbot_rrhh` → **Traces** |
+| A whole conversation, turn by turn | `chatbot_rrhh` → **Sessions** |
+| The steps of an answer (what it retrieved, which prompt it used) | Any trace → open → *span* tree |
+| Evaluations and their mean metrics | **Experiments** → `rag_evaluation` → **Evaluation runs** |
+| Each judge's verdict and rationale per question | **Evaluation runs** → open a run, or **Traces** → open a trace → *Assessments* |
+| Which questions got worse against the baseline | `rag_evaluation` → **Evaluation runs** → select two runs → **Compare** |
+| App versions (provider + model + prompt + k) | Inside each experiment → **Agent versions** |
+| Recurring failures grouped, with their traces as evidence | `chatbot_rrhh` → **Issues** → *Run issue detection* (needs an MLflow server) |
 
-> Las pantallas **Judges**, **Review**, **Datasets** y **Playground** también existen en MLflow 3, pero este proyecto aún no las usa: son buenas candidatas para el desafío.
-
----
-
-## 🔍 ¿Qué puedes hacer?
-
-- 💬 Hacer preguntas al chatbot y ver de dónde sale cada respuesta
-- 📝 Versionar prompts y promoverlos con alias
-- 🔁 Evaluar diferentes prompts, proveedores, `k` y estrategias de chunking
-- ⚖️ Calificar con jueces LLM y revisar su razonamiento
-- 🔭 Inspeccionar cada paso del RAG con trazas
-- 👥 Recoger feedback humano y llevarlo al dataset de evaluación
-- 🔄 Adaptar a otros dominios (legal, salud, educación…)
+> The **Judges**, **Review**, **Datasets** and **Playground** screens also exist in MLflow 3, but this project does not use them yet: good candidates for the challenge.
 
 ---
 
-## ⚙️ Stack Tecnológico
+## 🔍 What can you do?
 
-- **OpenAI / Groq + LangChain** – LLM + RAG (proveedor configurable)
-- **FastEmbed** – Embeddings locales (cuando se usa Groq)
+- 💬 Ask the chatbot questions and see where each answer comes from
+- 📝 Version prompts and promote them with aliases
+- 🔁 Evaluate different prompts, providers, `k` values and chunking strategies
+- ⚖️ Grade with LLM judges and review their rationale
+- 📊 Compare versions question by question against a baseline
+- 🔭 Inspect each RAG step with traces and whole conversations with sessions
+- 👥 Collect human feedback and bring it into the evaluation dataset
+- 🔄 Adapt it to other domains (legal, health, education…)
+
+---
+
+## ⚙️ Tech stack
+
+- **OpenAI / Groq + LangChain** – LLM + RAG (configurable provider)
+- **FastEmbed** – Local embeddings (when using Groq)
 - **FAISS** – Vectorstore
 - **Streamlit** – UI
-- **MLflow 3.18** – Prompt Registry, Tracing con sesiones, evaluación con jueces LLM y scorers de código, comparación contra línea base, evaluación online, detección de issues, Skill Registry, feedback y versiones de la app
+- **MLflow 3.18** – Prompt Registry, Tracing with sessions, evaluation with LLM judges and code-based scorers, baseline comparison, online evaluation, issue detection, Skill Registry, feedback and app versions
 - **GitHub Actions** – CI/CD
-- **DevContainer** – Desarrollo portable
+- **DevContainer** – Portable development
 
 ---
 
-## 🛠️ Solución de problemas
+## 🛠️ Troubleshooting
 
-| Síntoma | Causa / solución |
+| Symptom | Cause / fix |
 |---|---|
-| `No existe el índice en 'vectorstore/...'` | Falta construir el índice, o cambiaste `EMBEDDINGS_PROVIDER`: ejecuta el paso 2. |
-| La primera consulta con Groq tarda mucho | FastEmbed descarga el modelo de embeddings (~220 MB) la primera vez. |
-| Muchos `Rate-limited ... retrying` durante `run_eval.py` | Normal con el plan gratuito de Groq: MLflow reintenta solo. Ver [Evaluar con el plan gratuito de Groq](#-evaluar-con-el-plan-gratuito-de-groq). |
-| Jueces con ⚠️ al final de la evaluación | Se agotaron los reintentos o la cuota diaria. Reduce jueces con `EVAL_SCORERS`, baja el ritmo con `MLFLOW_GENAI_EVAL_SCORER_RATE_LIMIT=0.1` o cambia `EVAL_MODEL`. |
-| El dashboard no muestra evaluaciones anteriores | Las versiones previas del repo guardaban en `mlruns/` con otro formato; ahora todo vive en `mlflow.db`. Vuelve a ejecutar `run_eval.py`. |
-| `mlflow ui` no muestra nada | Ejecútalo desde la raíz del repo (donde está `mlflow.db`) o usa `mlflow ui --backend-store-uri sqlite:///mlflow.db`. |
-| El prompt editado no cambia en la app | Registra la nueva versión (`python -m app.prompt_registry`) y, si la quieres en producción, promuévela con `--promote N`. La lista de prompts en la app se refresca cada 30 s. |
-| `test.yml` aparece como *skipped* en GitHub | Es esperado: el *quality gate* real corre en `eval.yml`, después de la evaluación. |
+| `No index found at 'vectorstore/...'` | The index has not been built, or you changed `EMBEDDINGS_PROVIDER`: run step 2. |
+| The first query with Groq takes a long time | FastEmbed downloads the embeddings model (~220 MB) the first time. |
+| Many `Rate-limited ... retrying` during `run_eval.py` | Normal on Groq's free tier: MLflow retries on its own. See [Evaluating on Groq's free tier](#-evaluating-on-groqs-free-tier). |
+| Judges with ⚠️ at the end of the evaluation | Retries or the daily quota ran out. Use fewer judges with `EVAL_SCORERS`, slow down with `MLFLOW_GENAI_EVAL_SCORER_RATE_LIMIT=0.1` or change `EVAL_MODEL`. |
+| The dashboard does not show older evaluations | Older versions of the repo stored data in `mlruns/` in another format; now everything lives in `mlflow.db`. Run `run_eval.py` again. |
+| `mlflow ui` shows nothing | Run it from the repo root (where `mlflow.db` lives) or use `mlflow ui --backend-store-uri sqlite:///mlflow.db`. |
+| The edited prompt does not change in the app | Register the new version (`python -m app.prompt_registry`) and, if you want it in production, promote it with `--promote N`. The app's prompt list refreshes every 30 s. |
+| Everything shows up in Spanish | Set `APP_LANG=en` in `.env` (default is `es`) and restart Streamlit. |
+| The comparison says `insufficient_pairs` | `compare_evaluations` needs at least 6 paired questions per judge; check both runs used the same dataset. |
+| `test.yml` shows as *skipped* on GitHub | Expected: the real *quality gate* runs in `eval.yml`, after the evaluation. |
 
 ---
 
-## 🆕 Novedades de MLflow 3.18 en este repo
+## 🆕 What's new in MLflow 3.18 in this repo
 
-| Función | Dónde | Cómo |
+| Feature | Where | How |
 |---|---|---|
-| 📊 **Comparar contra una línea base** | `app/run_eval.py --baseline`, `tests/test_run_eval.py` | Evalúa la línea base y la candidata, las compara pregunta por pregunta (`compare_evaluations`) y lista las que empeoraron. El quality gate falla si un juez empeora con significancia estadística. |
-| ✅ **Scorers de código + evaluación online** | `app/code_scorers.py`, `app/monitoring.py` | Scorers deterministas (sin LLM) en cada evaluación; con un servidor MLflow, `python -m app.monitoring` los activa sobre el tráfico real del chat. |
-| 💬 **Sesiones** | `app/tracking.py` (`ask`) | Cada conversación de Streamlit lleva `session_id`, `user_id` y `environment` en su traza. |
-| 🔎 **Detección automática de issues** | UI de MLflow → **Issues** | Analiza las trazas del chat (necesita servidor y una API key de LLM). |
-| 📚 **Agent Skill Registry** | `labs/mlflow_318/skills/` | Un skill para que tu agente de código investigue y corrija issues con las trazas. |
+| 📊 **Compare against a baseline** | `app/run_eval.py --baseline`, `tests/test_run_eval.py` | Evaluates the baseline and the candidate, compares them question by question (`compare_evaluations`) and lists the ones that got worse. The quality gate fails if a judge gets significantly worse. |
+| ✅ **Code-based scorers + online evaluation** | `app/code_scorers.py`, `app/monitoring.py` | Deterministic scorers (no LLM) in every evaluation; with an MLflow server, `python -m app.monitoring` turns them on for the chat's real traffic. |
+| 💬 **Sessions** | `app/tracking.py` (`ask`) | Each Streamlit conversation carries `session_id`, `user_id` and `environment` on its traces. |
+| 🔎 **Automatic Issue Detection** | MLflow UI → **Issues** | Analyzes the chat's traces (needs a server and an LLM API key). |
+| 📚 **Agent Skill Registry** | `labs/mlflow_318/skills/` | A skill so your coding agent investigates and fixes issues using the traces. |
 
 ```bash
-# Comparar el prompt v2 contra el de producción
-PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo \
-  python app/run_eval.py --baseline prompts:/asistente_rrhh@production
+# Compare prompt v2 against production
+PROMPT_VERSION=prompts:/hr_assistant@v2_short_direct \
+  python app/run_eval.py --baseline prompts:/hr_assistant@production
 pytest tests/test_run_eval.py -v
 ```
 
-El dataset de evaluación tiene 10 preguntas: `compare_evaluations` necesita al menos 6 pares por juez.
+The evaluation dataset has 10 questions: `compare_evaluations` needs at least 6 pairs per judge.
 
-### 🧪 Laboratorio paso a paso
+### 🧪 Step-by-step lab
 
-En [`labs/mlflow_318/`](labs/mlflow_318/README.md) están las cinco funciones en un ciclo completo (tráfico → issues → skill → corrección comprobada → monitoreo), con un agente simulado con fallas sembradas: casi todo funciona sin API key.
+[`labs/mlflow_318/`](labs/mlflow_318/README.md) puts the five features in a full cycle (traffic → issues → skill → proven fix → monitoring), with a simulated agent with planted failures: almost everything runs without an API key.
 
 ```bash
 pip install -r labs/mlflow_318/requirements.txt
 ./labs/mlflow_318/start_server.sh
-python labs/mlflow_318/paso1_trafico.py
-python labs/mlflow_318/paso2_comparar.py
+APP_LANG=en python labs/mlflow_318/step1_traffic.py
+APP_LANG=en python labs/mlflow_318/step2_compare.py
 ```
 
 ---
 
-## 🎓 Desafío para estudiantes
+## 🎓 Student challenge
 
-El desafío completo está en **[DESAFIO.md](DESAFIO.md)**: llevar el chatbot a un dominio propio y demostrar, con evidencia de MLflow, que la versión en producción es la mejor.
+The full challenge is in **[CHALLENGE.md](CHALLENGE.md)**: take the chatbot to your own domain and prove, with MLflow evidence, that the version in production is the best one.
 
-| Parte | Qué se hace |
+| Part | What you do |
 |---|---|
-| 1. Dominio | Cambiar documentos, prompts, textos y guías a un dominio nuevo |
-| 2. Dataset | Al menos 15 preguntas: directas, multi-documento, sin respuesta y adversarias |
-| 3. Experimentos | Comparar prompts, `k` y chunking; diagnosticar fallos con trazas |
-| 4. Evaluadores | Un `@scorer` de código, un juez `make_judge` y `Guidelines` del dominio |
-| 5. Confianza en el juez | Etiquetar respuestas a mano y medir el acuerdo juez–humano |
-| 6. Producción | Promover, ajustar el quality gate y demostrar que el CI bloquea un prompt peor |
-| 7. Informe | Conclusiones con evidencia, incluyendo costo en latencia y tokens |
+| 1. Domain | Change documents, prompts, texts and guidelines to a new domain |
+| 2. Dataset | At least 15 questions: direct, multi-document, unanswerable and adversarial |
+| 3. Experiments | Compare prompts, `k` and chunking; diagnose failures with traces |
+| 4. Evaluators | A code `@scorer`, a `make_judge` judge and domain `Guidelines` |
+| 5. Trusting the judge | Label answers by hand and measure judge–human agreement |
+| 6. Production | Promote, tune the quality gate and show that CI blocks a worse prompt |
+| 7. Report | Evidence-based conclusions, including the cost in latency and tokens |
 
-Incluye entregables, una rúbrica sugerida y consejos para el plan gratuito de Groq.
+It includes deliverables, a suggested rubric and tips for Groq's free tier.
 
 ---
 
-¡Listo para ser usado en clase, investigación o producción educativa! 🚀
+Ready to be used in class, research or educational production! 🚀

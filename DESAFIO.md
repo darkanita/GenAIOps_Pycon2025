@@ -1,10 +1,12 @@
+🌐 [English](CHALLENGE.md) | **Español**
+
 # 🎓 Desafío: lleva el chatbot a tu propio dominio con GenAIOps
 
 ## 🎯 Objetivo
 
 Construir un chatbot RAG para **un dominio distinto a Recursos Humanos** y demostrar, **con evidencia de MLflow**, que tu versión en producción es la mejor de las que probaste, que sabes por qué falla cuando falla y que tu evaluación es confiable.
 
-> **Antes de empezar:** completa el [🧭 Recorrido guiado del README](README.md#-recorrido-guiado-empieza-aquí). Este desafío asume que ya sabes registrar prompts, evaluar y leer trazas.
+> **Antes de empezar:** completa el [🧭 Recorrido guiado del README](README.es.md#-recorrido-guiado-empieza-aquí). Este desafío asume que ya sabes registrar prompts, evaluar y leer trazas.
 
 ---
 
@@ -31,7 +33,7 @@ Construir un chatbot RAG para **un dominio distinto a Recursos Humanos** y demos
 
 ## 💸 Presupuesto de llamadas (plan gratuito de Groq)
 
-Cada evaluación completa hace ~50 llamadas al juez y Groq limita los tokens por día. Para no quedarte sin cuota:
+Cada evaluación completa hace ~100 llamadas al juez (10 preguntas × 7 jueces LLM; el doble con `--baseline`) y Groq limita los tokens por día. Para no quedarte sin cuota:
 
 - Mientras iteras, evalúa solo los jueces que necesitas: `EVAL_SCORERS=correctness,retrieval_groundedness`.
 - Haz las evaluaciones completas solo para las configuraciones finalistas.
@@ -47,10 +49,10 @@ Elige un dominio (salud, educación, legal, bancario, turismo…) y consigue **e
 |---|---|
 | Documentos | Reemplaza los archivos de `data/pdfs/` |
 | Nombre del prompt | `PROMPT_NAME=asistente_<tu_dominio>` en `.env` |
-| Prompts | Reemplaza los archivos de `app/prompts/` (deben incluir `{question}` y `{context}`) |
-| Título y subtítulo del chat | `app/ui_streamlit.py` y el `title`/`subtitle` por defecto de `render_chat()` en `app/chat_ui.py` |
+| Prompts | Reemplaza los archivos de `app/prompts/` (y de `app/prompts/en/` si trabajas en inglés; deben incluir `{question}` y `{context}`) |
+| Título, subtítulo y demás textos del chat | `chat.title`, `chat.subtitle` y `chat.title_contoso` en `app/i18n.py` (en español e inglés) |
 | Preguntas de respaldo | `FALLBACK_EXAMPLES` en `app/chat_ui.py` |
-| Guía de tono | `tono_profesional` en `get_scorers()` de `app/run_eval.py` (menciona RRHH) |
+| Guía de tono | `eval.guideline_tone` en `app/i18n.py` (menciona Recursos Humanos) |
 | Experimento del chat (opcional) | `CHAT_EXPERIMENT` en `app/tracking.py` |
 
 Después reconstruye el índice y registra los prompts:

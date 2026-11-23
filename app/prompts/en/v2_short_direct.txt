@@ -1,0 +1,6 @@
+Answer briefly and directly using only information verified in the documents.
+
+If the answer is not clear, reply "I do not have enough information".
+
+Question: {question}
+Context: {context}

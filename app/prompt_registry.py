@@ -3,7 +3,8 @@
 Versionamiento de prompts con el Prompt Registry de MLflow.
 
 Los archivos de app/prompts/*.txt son la fuente: cada archivo se registra
-como una VERSIÓN del prompt "asistente_rrhh" (PROMPT_NAME). Además:
+como una VERSIÓN del prompt "asistente_rrhh" (PROMPT_NAME). Con APP_LANG=en la
+fuente es app/prompts/en/*.txt y el prompt se llama "hr_assistant". Además:
   - cada versión recibe un alias con el nombre de su archivo (p. ej. @v1_asistente_rrhh)
   - el alias @production apunta a la versión que usa la app por defecto
 
@@ -25,8 +26,11 @@ import re
 import mlflow
 from mlflow import MlflowClient
 
-PROMPT_DIR = "app/prompts"
-PROMPT_NAME = os.getenv("PROMPT_NAME", "asistente_rrhh")
+from app.i18n import by_lang, t
+
+# Un prompt por idioma: los archivos en español viven en app/prompts/, los de inglés en app/prompts/en/
+PROMPT_DIR = by_lang("app/prompts", "app/prompts/en")
+PROMPT_NAME = os.getenv("PROMPT_NAME") or by_lang("asistente_rrhh", "hr_assistant")
 PRODUCTION_ALIAS = "production"
 DEFAULT_PROMPT = f"prompts:/{PROMPT_NAME}@{PRODUCTION_ALIAS}"
 
@@ -67,13 +71,13 @@ def register_prompts(name=PROMPT_NAME, path=PROMPT_DIR, verbose=True):
         pv = mlflow.genai.register_prompt(
             name=name,
             template=template,
-            commit_message=f"Desde {filename}" + (" (actualizado)" if current else ""),
+            commit_message=t("prompts.commit", file=filename) + (t("prompts.updated") if current else ""),
             tags={"source_file": filename},
         )
         client.set_prompt_alias(name, alias, pv.version)
         registered.append((filename, pv.version))
         if verbose:
-            print(f"📝 {filename} → {name} v{pv.version} (@{alias})")
+            print(t("prompts.registered", file=filename, name=name, version=pv.version, alias=alias))
 
     # La primera vez, @production apunta a la primera versión registrada
     versions = _existing_versions(name)
@@ -82,10 +86,10 @@ def register_prompts(name=PROMPT_NAME, path=PROMPT_DIR, verbose=True):
         first = min(int(v.version) for v in versions)
         client.set_prompt_alias(name, PRODUCTION_ALIAS, first)
         if verbose:
-            print(f"🚀 @{PRODUCTION_ALIAS} → v{first}")
+            print(t("prompts.production", alias=PRODUCTION_ALIAS, version=first))
 
     if verbose and not registered:
-        print("✔️  Prompts al día, no hay versiones nuevas.")
+        print(t("prompts.up_to_date"))
     return registered
 
 
@@ -124,7 +128,7 @@ def load_prompt_text(ref: str) -> tuple[str, str]:
 
     path = os.path.join(PROMPT_DIR, f"{ref}.txt")
     if not os.path.exists(path):
-        raise FileNotFoundError(f"Prompt no encontrado: {path}")
+        raise FileNotFoundError(t("prompts.not_found", path=path))
     with open(path, encoding="utf-8") as f:
         return f.read(), path
 
@@ -149,9 +153,9 @@ def list_prompt_options(name=PROMPT_NAME) -> list[str]:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Registro de prompts en MLflow")
+    parser = argparse.ArgumentParser(description=t("prompts.arg_desc"))
     parser.add_argument("--promote", type=int, metavar="VERSION",
-                        help="Mueve el alias @production a esta versión")
+                        help=t("prompts.arg_promote"))
     args = parser.parse_args()
     if args.promote:
         promote(args.promote)
