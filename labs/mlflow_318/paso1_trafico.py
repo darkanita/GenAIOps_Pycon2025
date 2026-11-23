@@ -23,7 +23,6 @@ import uuid
 from config import TRAFFIC_EXPERIMENT, setup
 
 import mlflow
-from mlflow.entities import SpanType
 
 # Conversaciones típicas. Algunas disparan a propósito las fallas del agente v1.
 CONVERSACIONES = [
@@ -62,26 +61,18 @@ def build_mock(version: str):
 
 def build_rag():
     """RAG real del repositorio (necesita el índice y la API key del proveedor)."""
+    os.environ["APP_ENV"] = "production"   # antes de importar app.tracking
     from app.prompt_registry import DEFAULT_PROMPT
     from app.rag_pipeline import build_chain, load_vectorstore_from_disk
-    from app.tracking import enable_tracing
+    from app.tracking import ask, enable_tracing
 
     enable_tracing()
     chain = build_chain(load_vectorstore_from_disk(),
                         prompt_version=os.getenv("PROMPT_VERSION") or DEFAULT_PROMPT,
                         k=int(os.getenv("RETRIEVER_K") or 4))
 
-    @mlflow.trace(name="asistente_rrhh", span_type=SpanType.AGENT)
-    def responder(pregunta: str, session_id: str | None = None, user_id: str | None = None,
-                  historial: list | None = None) -> str:
-        mlflow.update_current_trace(
-            metadata={"mlflow.trace.session": session_id, "mlflow.trace.user": user_id},
-            tags={"environment": "production", "agent_version": "rag"},
-        )
-        result = chain.invoke({"question": pregunta, "chat_history": historial or []})
-        return result["answer"]
-
-    return lambda pregunta, historial, sid, uid: responder(pregunta, sid, uid, historial)
+    # La misma función que usa la app de Streamlit: traza raíz con sesión y usuario
+    return lambda pregunta, historial, sid, uid: ask(chain, pregunta, historial, sid, uid)[0]["answer"]
 
 
 def main():

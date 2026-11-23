@@ -28,5 +28,35 @@
         "answer": "El role library no incluye el rol de analista de datos, por lo que el asistente debe indicar que no tiene información sobre ese rol.",
         "type": "sin respuesta",
         "source": "role_library.pdf no contiene ese rol"
+    },
+    {
+        "question": "¿Cuál es el monto máximo que reembolsa PerksPlus?",
+        "answer": "PerksPlus permite reembolsar hasta 1000 dólares en programas relacionados con la actividad física.",
+        "type": "directa",
+        "source": "PerksPlus.pdf, p. 3"
+    },
+    {
+        "question": "¿PerksPlus cubre clases de surf?",
+        "answer": "Sí. PerksPlus cubre lecciones de surf, así como de esquí y snowboard, buceo y equitación.",
+        "type": "directa",
+        "source": "PerksPlus.pdf, p. 3"
+    },
+    {
+        "question": "¿Qué medicamentos cubre Northwind Standard?",
+        "answer": "Northwind Standard solo cubre medicamentos genéricos y de marca; a diferencia de Northwind Health Plus, no cubre medicamentos especializados.",
+        "type": "directa",
+        "source": "Benefit_Options.pdf, p. 3"
+    },
+    {
+        "question": "¿Con qué frecuencia se realizan las evaluaciones de desempeño y qué incluyen?",
+        "answer": "Las evaluaciones de desempeño son anuales. El empleado recibe un resumen escrito con una calificación de su desempeño, retroalimentación y metas y objetivos para el año siguiente.",
+        "type": "directa",
+        "source": "employee_handbook.pdf, p. 4"
+    },
+    {
+        "question": "¿Qué debo hacer si soy testigo de violencia en el trabajo?",
+        "answer": "Debes notificar de inmediato a tu supervisor o a un representante de Recursos Humanos.",
+        "type": "directa",
+        "source": "employee_handbook.pdf, p. 6"
     }
 ]

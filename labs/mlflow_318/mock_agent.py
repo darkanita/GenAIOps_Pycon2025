@@ -78,14 +78,14 @@ CORPUS = [
         "temas": "perksplus reembolsa suplementos alimenticios comida excluye",
     },
     {
-        "doc": "employee_handbook.pdf", "page": 3,
+        "doc": "employee_handbook.pdf", "page": 4,
         "texto": "Las evaluaciones de desempeño se realizan de forma anual con tu supervisor. "
                  "Recibirás un resumen escrito con tu calificación, retroalimentación y metas "
                  "para el siguiente año.",
         "temas": "evaluaciones desempeno frecuencia realizan",
     },
     {
-        "doc": "employee_handbook.pdf", "page": 4,
+        "doc": "employee_handbook.pdf", "page": 6,
         "texto": "Si eres testigo o víctima de violencia laboral, notifica de inmediato a tu "
                  "supervisor o a un representante de Recursos Humanos.",
         "temas": "violencia trabajo testigo victima acoso",

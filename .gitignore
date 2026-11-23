@@ -34,3 +34,4 @@ mlflow_ci.db
 labs/mlflow_318/ultima_comparacion.json
 labs/mlflow_318/issues_para_agente.md
 .claude/skills/genaiops-rrhh-triage/
+.eval_comparison.json
