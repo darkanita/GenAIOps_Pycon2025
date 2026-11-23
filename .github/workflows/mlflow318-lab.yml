@@ -1,21 +1,30 @@
-name: Laboratorio MLflow 3.18 (quality gate)
+name: MLflow 3.18 lab (quality gate)
 
-# Corre el laboratorio con el agente simulado: no necesita API keys.
+# Runs the lab with the simulated agent, in Spanish and English: no API keys needed.
 on:
   push:
     paths:
       - 'labs/mlflow_318/**'
+      - 'app/i18n.py'
+      - '**.md'
+      - 'tests/test_docs_parity.py'
       - '.github/workflows/mlflow318-lab.yml'
   pull_request:
     paths:
       - 'labs/mlflow_318/**'
+      - 'app/i18n.py'
+      - '**.md'
   workflow_dispatch:
 
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lang: [es, en]      # the lab works in Spanish and in English
     env:
-      MLFLOW_TRACKING_URI: sqlite:///mlflow_ci.db
+      APP_LANG: ${{ matrix.lang }}
+      MLFLOW_TRACKING_URI: sqlite:///mlflow_ci_${{ matrix.lang }}.db
       MLFLOW_DISABLE_AGENT_HINT: "1"
 
     steps:
@@ -25,17 +34,21 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar dependencias
+      - name: Install dependencies
         run: pip install -r labs/mlflow_318/requirements.txt
 
-      - name: v2 debe ser bloqueada (mejora el promedio pero empeora preguntas)
+      - name: v2 must be blocked (better average, worse questions)
         run: |
-          if python labs/mlflow_318/paso2_comparar.py --baseline v1 --candidate v2 --gate; then
-            echo "::error::El gate dejó pasar a v2, que tiene regresiones"; exit 1
+          if python labs/mlflow_318/step2_compare.py --baseline v1 --candidate v2 --gate; then
+            echo "::error::The gate let v2 through, but it has regressions"; exit 1
           fi
 
-      - name: v3 debe pasar el gate
-        run: python labs/mlflow_318/paso2_comparar.py --baseline v1 --candidate v3 --gate
+      - name: v3 must pass the gate
+        run: python labs/mlflow_318/step2_compare.py --baseline v1 --candidate v3 --gate
 
-      - name: Gate en pytest
+      - name: Gate in pytest
         run: pytest labs/mlflow_318/test_gate.py -v
+
+      - name: English and Spanish docs have the same structure
+        if: matrix.lang == 'en'
+        run: pytest tests/test_docs_parity.py -v

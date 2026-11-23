@@ -1,0 +1,141 @@
+[
+  {
+    "question": "What does the Northwind Health Plus benefit plan cover?",
+    "expected_response": "Northwind Health Plus covers medical, vision and dental services; prescription drugs; mental health and substance abuse; preventive care; and emergency services in and out of network.",
+    "key_facts": [
+      "vision",
+      "dental",
+      "drugs",
+      "mental health",
+      "emergency"
+    ],
+    "should_abstain": false,
+    "type": "multi-fact"
+  },
+  {
+    "question": "What does the PerksPlus program include?",
+    "expected_response": "PerksPlus reimburses up to 1000 dollars for physical wellness activities such as gym memberships, personal training, yoga or Pilates, fitness equipment and group classes.",
+    "key_facts": [
+      "1000",
+      "gym",
+      "yoga",
+      "equipment"
+    ],
+    "should_abstain": false,
+    "type": "multi-fact"
+  },
+  {
+    "question": "What does the Northwind Standard plan not cover compared to Northwind Health Plus?",
+    "expected_response": "Northwind Standard does not cover emergency services, mental health and substance abuse, or out-of-network services, and it does not cover specialty drugs.",
+    "key_facts": [
+      "emergency",
+      "mental health",
+      "out-of-network",
+      "specialty"
+    ],
+    "should_abstain": false,
+    "type": "multi-fact"
+  },
+  {
+    "question": "What is the maximum amount PerksPlus reimburses?",
+    "expected_response": "PerksPlus reimburses up to 1000 dollars.",
+    "key_facts": [
+      "1000"
+    ],
+    "should_abstain": false,
+    "type": "direct"
+  },
+  {
+    "question": "Does PerksPlus cover surfing lessons?",
+    "expected_response": "Yes. PerksPlus covers lessons such as surfing, skiing and snowboarding, scuba diving and horseback riding.",
+    "key_facts": [
+      "surfing"
+    ],
+    "should_abstain": false,
+    "type": "direct"
+  },
+  {
+    "question": "Does PerksPlus reimburse dietary supplements?",
+    "expected_response": "No. PerksPlus does not cover food or supplements, medical treatments, or travel unrelated to a fitness program.",
+    "key_facts": [
+      "not",
+      "supplements"
+    ],
+    "should_abstain": false,
+    "type": "direct"
+  },
+  {
+    "question": "Which prescription drugs does Northwind Standard cover?",
+    "expected_response": "Northwind Standard covers generic and brand-name drugs, but not specialty drugs.",
+    "key_facts": [
+      "generic",
+      "brand-name"
+    ],
+    "should_abstain": false,
+    "type": "direct"
+  },
+  {
+    "question": "Does Northwind Standard cover out-of-network services?",
+    "expected_response": "No. Northwind Standard does not cover out-of-network services.",
+    "key_facts": [
+      "not",
+      "out-of-network"
+    ],
+    "should_abstain": false,
+    "type": "direct"
+  },
+  {
+    "question": "Which vision and dental services does each plan cover?",
+    "expected_response": "Health Plus covers vision exams, glasses and contact lenses, plus dental exams, cleanings and fillings. Standard only covers vision exams and glasses.",
+    "key_facts": [
+      "glasses",
+      "contact lenses",
+      "cleanings",
+      "Standard"
+    ],
+    "should_abstain": false,
+    "type": "multi-fact"
+  },
+  {
+    "question": "How often are performance reviews held?",
+    "expected_response": "Performance reviews are annual and include a written summary with a rating, feedback and goals for the coming year.",
+    "key_facts": [
+      "annual",
+      "written summary",
+      "goals"
+    ],
+    "should_abstain": false,
+    "type": "multi-fact"
+  },
+  {
+    "question": "What should I do if I witness violence at work?",
+    "expected_response": "You should immediately notify your supervisor or a Human Resources representative.",
+    "key_facts": [
+      "supervisor",
+      "Human Resources"
+    ],
+    "should_abstain": false,
+    "type": "direct"
+  },
+  {
+    "question": "What is the procedure to take maternity leave?",
+    "expected_response": "The documents contain no information about maternity leave; the assistant must say it does not have enough information.",
+    "key_facts": [],
+    "should_abstain": true,
+    "type": "out of scope"
+  },
+  {
+    "question": "What are the responsibilities of a data analyst according to the role library?",
+    "expected_response": "The role library does not include a data analyst role; the assistant must say it has no information about that role.",
+    "key_facts": [],
+    "should_abstain": true,
+    "type": "out of scope"
+  },
+  {
+    "question": "How many remote work days does the company policy allow?",
+    "expected_response": "The documents do not describe a remote work policy; the assistant must say it has no information.",
+    "key_facts": [],
+    "should_abstain": true,
+    "type": "out of scope"
+  }
+]

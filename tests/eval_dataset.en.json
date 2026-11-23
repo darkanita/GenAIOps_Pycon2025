@@ -1,0 +1,62 @@
+[
+    {
+        "question": "What does the Northwind Health Plus benefit plan cover?",
+        "answer": "Northwind Health Plus covers medical, vision and dental services; prescription drugs (generic, brand-name and specialty); mental health and substance abuse services; preventive care; and emergency services, both in-network and out-of-network.",
+        "type": "direct",
+        "source": "Benefit_Options.pdf, p. 3"
+    },
+    {
+        "question": "What does the PerksPlus program include?",
+        "answer": "PerksPlus reimburses up to 1000 dollars for physical wellness activities such as gym memberships, personal training, yoga or Pilates classes, fitness equipment and group classes. It does not cover expenses unrelated to physical activity, medical treatments, or food and supplements.",
+        "type": "direct",
+        "source": "PerksPlus.pdf, pp. 3-4"
+    },
+    {
+        "question": "What does the Northwind Standard plan not cover compared to Northwind Health Plus?",
+        "answer": "Unlike Northwind Health Plus, Northwind Standard does not cover emergency services, mental health and substance abuse services, or out-of-network services; for prescription drugs it only covers generic and brand-name drugs, not specialty drugs.",
+        "type": "multi-document",
+        "source": "Benefit_Options.pdf, p. 3"
+    },
+    {
+        "question": "What is the procedure to take maternity leave?",
+        "answer": "The documents contain no information about the procedure to request maternity leave, so the assistant must say it does not have enough information to answer.",
+        "type": "no answer",
+        "source": "Not in any document"
+    },
+    {
+        "question": "What are the responsibilities of a data analyst according to the role library?",
+        "answer": "The role library does not include a data analyst role, so the assistant must say it does not have information about that role.",
+        "type": "no answer",
+        "source": "role_library.pdf does not contain that role"
+    },
+    {
+        "question": "What is the maximum amount PerksPlus reimburses?",
+        "answer": "PerksPlus reimburses up to 1000 dollars for programs related to physical activity.",
+        "type": "direct",
+        "source": "PerksPlus.pdf, p. 3"
+    },
+    {
+        "question": "Does PerksPlus cover surfing lessons?",
+        "answer": "Yes. PerksPlus covers surfing lessons, as well as skiing and snowboarding, scuba diving and horseback riding lessons.",
+        "type": "direct",
+        "source": "PerksPlus.pdf, p. 3"
+    },
+    {
+        "question": "Which prescription drugs does Northwind Standard cover?",
+        "answer": "Northwind Standard only covers generic and brand-name drugs; unlike Northwind Health Plus, it does not cover specialty drugs.",
+        "type": "direct",
+        "source": "Benefit_Options.pdf, p. 3"
+    },
+    {
+        "question": "How often are performance reviews held and what do they include?",
+        "answer": "Performance reviews are held annually. The employee receives a written summary with a performance rating, feedback, and goals and objectives for the coming year.",
+        "type": "direct",
+        "source": "employee_handbook.pdf, p. 4"
+    },
+    {
+        "question": "What should I do if I witness violence at work?",
+        "answer": "You should immediately notify your supervisor or a Human Resources representative.",
+        "type": "direct",
+        "source": "employee_handbook.pdf, p. 6"
+    }
+]
