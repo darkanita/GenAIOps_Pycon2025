@@ -7,7 +7,8 @@ Incluye:
 - Referencias: documento, página y fragmento usado para responder
 - Panel lateral con proveedor/modelo, versión de prompt (Prompt Registry) y nº de fragmentos (k)
 - Caché del vectorstore y de la cadena (no se recargan en cada interacción)
-- Tracing con MLflow: cada respuesta es una traza enlazada a la versión de la app
+- Tracing con MLflow: cada respuesta es una traza enlazada a la versión de la app,
+  agrupada por conversación (session_id) para la vista Sessions de MLflow
 - Feedback 👍/👎 adjunto a la traza de la respuesta (mlflow.log_feedback)
 - Tiempo de respuesta
 """
@@ -15,8 +16,8 @@ Incluye:
 import json
 import os
 import time
+import uuid
 
-import mlflow
 import streamlit as st
 
 from app.llm_provider import describe
@@ -26,7 +27,7 @@ from app.rag_pipeline import (
     list_prompt_versions,
     load_vectorstore_from_disk,
 )
-from app.tracking import CHAT_EXPERIMENT, init_tracking, log_user_feedback
+from app.tracking import CHAT_EXPERIMENT, ask, init_tracking, log_user_feedback
 
 EVAL_DATASET = "tests/eval_dataset.json"
 FALLBACK_EXAMPLES = [
@@ -127,6 +128,7 @@ def _on_feedback(idx):
 
 def _new_conversation():
     st.session_state.messages = []
+    st.session_state.pop("session_id", None)
 
 
 # ---------- Sidebar ----------
@@ -168,6 +170,8 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    # Una sesión de MLflow por conversación (se renueva al limpiar el chat)
+    st.session_state.setdefault("session_id", f"chat-{uuid.uuid4().hex[:12]}")
 
     try:
         chain, prompt_uri = get_chain(resolve_prompt(config["prompt_version"]), config["k"])
@@ -207,8 +211,9 @@ def render_chat(title="🤖 Asistente de Recursos Humanos",
             history = [(m["question"], m["answer"]) for m in st.session_state.messages]
             start = time.perf_counter()
             try:
-                result = chain.invoke({"question": question, "chat_history": history})
-                trace_id = mlflow.get_last_active_trace_id(thread_local=True)
+                result, trace_id = ask(chain, question, history,
+                                       session_id=st.session_state.session_id,
+                                       user_id=os.getenv("APP_USER", "streamlit_user"))
             except Exception as e:
                 st.error(f"Error al consultar el modelo: {e}")
                 st.stop()

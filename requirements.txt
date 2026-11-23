@@ -2,7 +2,7 @@ openai>=1.0.0
 langchain>=0.2.0,<1.0.0
 streamlit>=1.50
 faiss-cpu>=1.7.4
-mlflow>=3.6
+mlflow>=3.18.0
 python-dotenv>=1.0.1
 fpdf==1.7.2
 matplotlib>=3.8.3

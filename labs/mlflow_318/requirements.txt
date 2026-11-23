@@ -1,0 +1,4 @@
+# Laboratorio MLflow 3.18 (agente simulado). Para --agent rag instala también ../../requirements.txt
+mlflow>=3.18.0
+python-dotenv>=1.0.1
+pytest>=7.4

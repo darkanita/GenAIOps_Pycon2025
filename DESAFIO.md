@@ -66,7 +66,7 @@ python -m app.prompt_registry
 
 ## 📝 Parte 2: Construye un dataset de evaluación que sirva
 
-Con 5 preguntas fáciles las métricas no dicen nada. Crea **al menos 15 preguntas** en `tests/eval_dataset.json`, que cubran estos tipos:
+Con 10 preguntas fáciles las métricas dicen poco. Crea **al menos 15 preguntas** en `tests/eval_dataset.json`, que cubran estos tipos:
 
 | Tipo | Mínimo | Qué mide | Ejemplo (dominio salud) |
 |---|---|---|---|

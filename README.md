@@ -12,6 +12,7 @@ Este proyecto demuestra cómo construir, evaluar y automatizar un chatbot de tip
 | [🔬 Cómo funciona MLflow](#-cómo-funciona-mlflow-en-este-proyecto) | Conceptos, qué se guarda, ciclo de mejora y guía de la UI |
 | [🛠️ Solución de problemas](#️-solución-de-problemas) | Errores frecuentes |
 | [🎓 Desafío para estudiantes](#-desafío-para-estudiantes) | Retos para practicar |
+| [🆕 Novedades de MLflow 3.18](#-novedades-de-mlflow-318-en-este-repo) | Comparación contra línea base, scorers de código, evaluación online, sesiones, issues y skills |
 
 ---
 
@@ -193,7 +194,9 @@ pytest tests/test_run_eval.py -v
 │   ├── chat_ui.py                ← componente de chat compartido por las UIs
 │   ├── metrics_ui.py             ← vista de métricas (evaluación + feedback)
 │   ├── prompt_registry.py        ← versionamiento de prompts en MLflow
-│   ├── tracking.py               ← tracing, versión de la app y feedback en MLflow
+│   ├── tracking.py               ← tracing con sesiones, versión de la app y feedback en MLflow
+│   ├── code_scorers.py           ← scorers de código (offline y online)
+│   ├── monitoring.py             ← evaluación online del chat (MLflow 3.18)
 │   └── prompts/                  ← fuente de las versiones del prompt
 │       ├── v1_asistente_rrhh.txt
 │       └── v2_resumido_directo.txt
@@ -208,7 +211,9 @@ pytest tests/test_run_eval.py -v
 │   └── devcontainer.json
 ├── .github/workflows/
 │   ├── eval.yml
+│   ├── mlflow318-lab.yml
 │   └── test.yml
+├── labs/mlflow_318/              ← laboratorio de novedades de MLflow 3.18
 ├── DESAFIO.md                    ← desafío para estudiantes
 ├── vectorstore/                  ← (generado) índices FAISS por proveedor de embeddings
 └── mlflow.db                     ← (generado) base de datos de MLflow: prompts, trazas, evaluaciones
@@ -395,6 +400,11 @@ Usa `mlflow.genai.evaluate` con `tests/eval_dataset.json` como ground truth y es
 | `Safety` | ¿Contiene contenido dañino u ofensivo? |
 | `Guidelines` `idioma_espanol` | ¿Está escrita en español? |
 | `Guidelines` `tono_profesional` | ¿Tono formal y sin inventar políticas? |
+| `respuesta_concisa` *(código)* | ¿Máximo 150 palabras? |
+| `sin_datos_personales` *(código)* | ¿Sin correos ni teléfonos en la respuesta? |
+| `sin_errores` *(código)* | ¿Ningún paso de la traza terminó en error? |
+
+Los tres últimos son **scorers de código** (`app/code_scorers.py`): deterministas, sin LLM y sin costo.
 
 - Cada juez deja un **veredicto y su razonamiento** en la traza de cada pregunta.
 - Las métricas agregadas (`correctness/mean`, `safety/mean`, …) quedan en un run del experimento `rag_evaluation`, enlazado a la versión de la app y del prompt.
@@ -406,7 +416,7 @@ Usa `mlflow.genai.evaluate` con `tests/eval_dataset.json` como ground truth y es
 
 #### 🐢 Evaluar con el plan gratuito de Groq
 
-El plan gratuito de Groq limita cada modelo a **30 solicitudes y 8K tokens por minuto, y 200K tokens por día**. Una evaluación completa (5 preguntas × 7 jueces) hace unas 50 llamadas al juez, así que:
+El plan gratuito de Groq limita cada modelo a **30 solicitudes y 8K tokens por minuto, y 200K tokens por día**. Una evaluación completa (10 preguntas × 7 jueces LLM) hace unas 100 llamadas al juez (los scorers de código no consumen cuota); con `--baseline` son el doble, así que:
 
 - Con `LLM_PROVIDER=groq`, `run_eval.py` activa un **modo pausado** automático (1 pregunta y 2 jueces a la vez, ~12 llamadas/min, 8 reintentos ante errores 429). Una evaluación completa tarda **varios minutos**.
 - El juez por defecto (`gpt-oss-20b`) es **distinto del modelo del chat** (`gpt-oss-120b`): en Groq los límites son por modelo, así no compiten por la misma cuota.
@@ -517,6 +527,9 @@ En el menú principal están **Experiments** y **Prompts**. Al abrir un experime
 | Las evaluaciones y sus métricas promedio | **Experiments** → `rag_evaluation` → **Evaluation runs** |
 | El veredicto y razonamiento de cada juez por pregunta | **Evaluation runs** → abrir un run, o **Traces** → abrir una traza → *Assessments* |
 | Las versiones de la app (proveedor + modelo + prompt + k) | Dentro de cada experimento → **Agent versions** |
+| Una conversación completa, turno por turno | `chatbot_rrhh` → **Sessions** |
+| Qué preguntas empeoraron frente a la línea base | `rag_evaluation` → **Evaluation runs** → selecciona dos runs → **Compare** |
+| Fallas recurrentes agrupadas, con sus trazas como evidencia | `chatbot_rrhh` → **Issues** → *Run issue detection* (requiere servidor MLflow) |
 
 > Las pantallas **Judges**, **Review**, **Datasets** y **Playground** también existen en MLflow 3, pero este proyecto aún no las usa: son buenas candidatas para el desafío.
 
@@ -540,7 +553,7 @@ En el menú principal están **Experiments** y **Prompts**. Al abrir un experime
 - **FastEmbed** – Embeddings locales (cuando se usa Groq)
 - **FAISS** – Vectorstore
 - **Streamlit** – UI
-- **MLflow 3** – Prompt Registry, Tracing, evaluación con jueces LLM, feedback y versiones de la app
+- **MLflow 3.18** – Prompt Registry, Tracing con sesiones, evaluación con jueces LLM y scorers de código, comparación contra línea base, evaluación online, detección de issues, Skill Registry, feedback y versiones de la app
 - **GitHub Actions** – CI/CD
 - **DevContainer** – Desarrollo portable
 
@@ -558,6 +571,38 @@ En el menú principal están **Experiments** y **Prompts**. Al abrir un experime
 | `mlflow ui` no muestra nada | Ejecútalo desde la raíz del repo (donde está `mlflow.db`) o usa `mlflow ui --backend-store-uri sqlite:///mlflow.db`. |
 | El prompt editado no cambia en la app | Registra la nueva versión (`python -m app.prompt_registry`) y, si la quieres en producción, promuévela con `--promote N`. La lista de prompts en la app se refresca cada 30 s. |
 | `test.yml` aparece como *skipped* en GitHub | Es esperado: el *quality gate* real corre en `eval.yml`, después de la evaluación. |
+
+---
+
+## 🆕 Novedades de MLflow 3.18 en este repo
+
+| Función | Dónde | Cómo |
+|---|---|---|
+| 📊 **Comparar contra una línea base** | `app/run_eval.py --baseline`, `tests/test_run_eval.py` | Evalúa la línea base y la candidata, las compara pregunta por pregunta (`compare_evaluations`) y lista las que empeoraron. El quality gate falla si un juez empeora con significancia estadística. |
+| ✅ **Scorers de código + evaluación online** | `app/code_scorers.py`, `app/monitoring.py` | Scorers deterministas (sin LLM) en cada evaluación; con un servidor MLflow, `python -m app.monitoring` los activa sobre el tráfico real del chat. |
+| 💬 **Sesiones** | `app/tracking.py` (`ask`) | Cada conversación de Streamlit lleva `session_id`, `user_id` y `environment` en su traza. |
+| 🔎 **Detección automática de issues** | UI de MLflow → **Issues** | Analiza las trazas del chat (necesita servidor y una API key de LLM). |
+| 📚 **Agent Skill Registry** | `labs/mlflow_318/skills/` | Un skill para que tu agente de código investigue y corrija issues con las trazas. |
+
+```bash
+# Comparar el prompt v2 contra el de producción
+PROMPT_VERSION=prompts:/asistente_rrhh@v2_resumido_directo \
+  python app/run_eval.py --baseline prompts:/asistente_rrhh@production
+pytest tests/test_run_eval.py -v
+```
+
+El dataset de evaluación tiene 10 preguntas: `compare_evaluations` necesita al menos 6 pares por juez.
+
+### 🧪 Laboratorio paso a paso
+
+En [`labs/mlflow_318/`](labs/mlflow_318/README.md) están las cinco funciones en un ciclo completo (tráfico → issues → skill → corrección comprobada → monitoreo), con un agente simulado con fallas sembradas: casi todo funciona sin API key.
+
+```bash
+pip install -r labs/mlflow_318/requirements.txt
+./labs/mlflow_318/start_server.sh
+python labs/mlflow_318/paso1_trafico.py
+python labs/mlflow_318/paso2_comparar.py
+```
 
 ---
 

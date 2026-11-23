@@ -28,3 +28,10 @@ venv/
 
 app/run_eval_tarea.py
 app/dashboard_tarea.py
+# Laboratorio MLflow 3.18 (generados)
+mlflow_lab318.db
+mlflow_ci.db
+labs/mlflow_318/ultima_comparacion.json
+labs/mlflow_318/issues_para_agente.md
+.claude/skills/genaiops-rrhh-triage/
+.eval_comparison.json

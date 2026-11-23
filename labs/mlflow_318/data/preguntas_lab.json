@@ -1,0 +1,100 @@
+[
+  {
+    "question": "¿Qué cubre el plan de beneficios Northwind Health Plus?",
+    "expected_response": "Northwind Health Plus cubre servicios médicos, de visión y dentales; medicamentos recetados; salud mental y abuso de sustancias; atención preventiva; y servicios de emergencia dentro y fuera de la red.",
+    "palabras_clave": ["visión", "dental", "medicamentos", "salud mental", "emergencia"],
+    "debe_abstenerse": false,
+    "tipo": "multi-dato"
+  },
+  {
+    "question": "¿Qué incluye el programa PerksPlus?",
+    "expected_response": "PerksPlus reembolsa hasta 1000 dólares en actividades de bienestar físico como gimnasio, entrenamiento personal, yoga o pilates, equipo deportivo y clases grupales.",
+    "palabras_clave": ["1000", "gimnasio", "yoga", "equipo"],
+    "debe_abstenerse": false,
+    "tipo": "multi-dato"
+  },
+  {
+    "question": "¿Qué no cubre el plan Northwind Standard en comparación con Northwind Health Plus?",
+    "expected_response": "Northwind Standard no cubre servicios de emergencia, salud mental y abuso de sustancias, ni servicios fuera de la red, y no cubre medicamentos especializados.",
+    "palabras_clave": ["emergencia", "salud mental", "fuera de la red", "especializados"],
+    "debe_abstenerse": false,
+    "tipo": "multi-dato"
+  },
+  {
+    "question": "¿Cuál es el monto máximo que reembolsa PerksPlus?",
+    "expected_response": "PerksPlus reembolsa hasta 1000 dólares.",
+    "palabras_clave": ["1000"],
+    "debe_abstenerse": false,
+    "tipo": "directa"
+  },
+  {
+    "question": "¿PerksPlus cubre clases de surf?",
+    "expected_response": "Sí. PerksPlus cubre lecciones como surf, esquí y snowboard, buceo y equitación.",
+    "palabras_clave": ["surf"],
+    "debe_abstenerse": false,
+    "tipo": "directa"
+  },
+  {
+    "question": "¿PerksPlus reembolsa suplementos alimenticios?",
+    "expected_response": "No. PerksPlus no cubre comida ni suplementos, ni tratamientos médicos ni viajes no relacionados con un programa de actividad física.",
+    "palabras_clave": ["no", "suplementos"],
+    "debe_abstenerse": false,
+    "tipo": "directa"
+  },
+  {
+    "question": "¿Qué medicamentos cubre Northwind Standard?",
+    "expected_response": "Northwind Standard cubre medicamentos genéricos y de marca, pero no los especializados.",
+    "palabras_clave": ["genéricos", "marca"],
+    "debe_abstenerse": false,
+    "tipo": "directa"
+  },
+  {
+    "question": "¿Northwind Standard cubre servicios fuera de la red?",
+    "expected_response": "No. Northwind Standard no cubre servicios fuera de la red.",
+    "palabras_clave": ["no", "fuera de la red"],
+    "debe_abstenerse": false,
+    "tipo": "directa"
+  },
+  {
+    "question": "¿Qué servicios de visión y dentales cubre cada plan?",
+    "expected_response": "Health Plus cubre exámenes de visión, anteojos y lentes de contacto, además de exámenes, limpiezas y calzas dentales. Standard solo cubre exámenes de visión y anteojos.",
+    "palabras_clave": ["anteojos", "lentes de contacto", "limpiezas", "Standard"],
+    "debe_abstenerse": false,
+    "tipo": "multi-dato"
+  },
+  {
+    "question": "¿Con qué frecuencia se realizan las evaluaciones de desempeño?",
+    "expected_response": "Las evaluaciones de desempeño son anuales e incluyen un resumen escrito con calificación, retroalimentación y metas para el siguiente año.",
+    "palabras_clave": ["anual", "resumen escrito", "metas"],
+    "debe_abstenerse": false,
+    "tipo": "multi-dato"
+  },
+  {
+    "question": "¿Qué debo hacer si soy testigo de violencia en el trabajo?",
+    "expected_response": "Debes notificar inmediatamente a tu supervisor o a un representante de Recursos Humanos.",
+    "palabras_clave": ["supervisor", "Recursos Humanos"],
+    "debe_abstenerse": false,
+    "tipo": "directa"
+  },
+  {
+    "question": "¿Cuál es el procedimiento para tomar una licencia por maternidad?",
+    "expected_response": "Los documentos no contienen información sobre licencia por maternidad; el asistente debe indicar que no tiene información suficiente.",
+    "palabras_clave": [],
+    "debe_abstenerse": true,
+    "tipo": "fuera de alcance"
+  },
+  {
+    "question": "¿Qué responsabilidades tiene un analista de datos según el role library?",
+    "expected_response": "El role library no incluye el rol de analista de datos; el asistente debe indicar que no tiene información sobre ese rol.",
+    "palabras_clave": [],
+    "debe_abstenerse": true,
+    "tipo": "fuera de alcance"
+  },
+  {
+    "question": "¿Cuántos días de teletrabajo permite la política de la empresa?",
+    "expected_response": "Los documentos no describen una política de teletrabajo; el asistente debe indicar que no tiene información.",
+    "palabras_clave": [],
+    "debe_abstenerse": true,
+    "tipo": "fuera de alcance"
+  }
+]
