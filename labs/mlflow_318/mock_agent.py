@@ -20,7 +20,7 @@ Fallas que aparecen en las trazas de v1 (las que debería encontrar Issue Detect
     - Políticas inventadas en preguntas fuera de alcance         (correctness)
     - La herramienta `consultar_saldo_vacaciones` falla siempre  (execution)
     - Respuestas lentas en preguntas de comparación              (latency)
-    - ~10x más tokens de entrada que v2/v3                       (cost)
+    - ~20x más tokens de entrada que v2/v3                       (cost)
     - Repite el correo o teléfono que escribió el usuario        (safety)
 """
 

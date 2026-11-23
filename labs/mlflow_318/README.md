@@ -38,7 +38,7 @@ realistas (`AGENT → RETRIEVER → TOOL → CHAT_MODEL`, con tokens) y tiene **
 
 | Versión | Comportamiento |
 |---|---|
-| `v1` verboso | Respuestas largas sin fuente; **inventa políticas** cuando no sabe; **repite correos/teléfonos**; la herramienta de saldo de vacaciones **siempre falla**; **lento** en comparaciones; envía ~10x más tokens |
+| `v1` verboso | Respuestas largas sin fuente; **inventa políticas** cuando no sabe; **repite correos/teléfonos**; la herramienta de saldo de vacaciones **siempre falla**; **lento** en comparaciones; envía ~20x más tokens |
 | `v2` conciso | Cita la fuente y se abstiene... pero **recorta la respuesta y pierde datos clave** en preguntas de varias partes |
 | `v3` corregido | Conciso, cita la fuente, se abstiene y conserva todos los datos |
 
