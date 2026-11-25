@@ -1,51 +1,52 @@
 [
     {
         "question": "What does the Northwind Health Plus benefit plan cover?",
-        "answer": "Northwind Health Plus covers medical, vision and dental services; prescription drugs (generic, brand-name and specialty); mental health and substance abuse services; preventive care; and emergency services, both in-network and out-of-network.",
+        "answer": "Northwind Health Plus covers medical, vision and dental services; prescription drugs; mental health and substance abuse services; preventive care; and emergency services, both in-network and out-of-network.",
         "type": "direct",
         "source": "Benefit_Options.pdf, p. 3"
     },
     {
         "question": "What does the PerksPlus program include?",
-        "answer": "PerksPlus reimburses up to 1000 dollars for physical wellness activities such as gym memberships, personal training, yoga or Pilates classes, fitness equipment and group classes. It does not cover expenses unrelated to physical activity, medical treatments, or food and supplements.",
+        "answer": "PerksPlus reimburses up to 1000 dollars for fitness-related programs, for example gym memberships, personal training, yoga or Pilates classes, fitness equipment, group fitness classes, and lessons such as skiing, scuba diving, surfing or horseback riding.",
         "type": "direct",
-        "source": "PerksPlus.pdf, pp. 3-4"
+        "source": "PerksPlus.pdf, p. 3"
     },
     {
         "question": "What does the Northwind Standard plan not cover compared to Northwind Health Plus?",
-        "answer": "Unlike Northwind Health Plus, Northwind Standard does not cover emergency services, mental health and substance abuse services, or out-of-network services; for prescription drugs it only covers generic and brand-name drugs, not specialty drugs.",
+        "answer": "Northwind Standard does not cover emergency services, mental health and substance abuse services, or out-of-network services. It also covers less than Health Plus for prescription drugs (only generic and brand-name, not specialty), vision (only exams and glasses, not contact lenses) and medical services (only doctor visits and lab tests, not hospital stays or X-rays).",
         "type": "multi-document",
-        "source": "Benefit_Options.pdf, p. 3"
+        "source": "Benefit_Options.pdf, p. 3",
+        "note": "Northwind_Standard_Benefits_Details.pdf (pp. 39-40) partly contradicts this: it says Standard does cover mental health care, but not substance abuse. If the retriever brings that page, the bot may answer differently without making anything up."
     },
     {
         "question": "What is the procedure to take maternity leave?",
-        "answer": "The documents contain no information about the procedure to request maternity leave, so the assistant must say it does not have enough information to answer.",
+        "answer": "The documents do not describe a procedure to request maternity leave, so the assistant must say it does not have that information. It may add that the Northwind Health Plus and Northwind Standard plans cover maternity medical care (prenatal, delivery and postnatal), which is not the same as leave.",
         "type": "no answer",
-        "source": "Not in any document"
+        "source": "No document describes leave; maternity care is in Northwind_Health_Plus_Benefits_Details.pdf and Northwind_Standard_Benefits_Details.pdf"
     },
     {
         "question": "What are the responsibilities of a data analyst according to the role library?",
         "answer": "The role library does not include a data analyst role, so the assistant must say it does not have information about that role.",
         "type": "no answer",
-        "source": "role_library.pdf does not contain that role"
+        "source": "role_library.pdf only describes executive, management and sales roles; it has no data analyst role"
     },
     {
         "question": "What is the maximum amount PerksPlus reimburses?",
-        "answer": "PerksPlus reimburses up to 1000 dollars for programs related to physical activity.",
+        "answer": "PerksPlus reimburses up to 1000 dollars for fitness-related programs.",
         "type": "direct",
         "source": "PerksPlus.pdf, p. 3"
     },
     {
         "question": "Does PerksPlus cover surfing lessons?",
-        "answer": "Yes. PerksPlus covers surfing lessons, as well as skiing and snowboarding, scuba diving and horseback riding lessons.",
+        "answer": "Yes. PerksPlus covers surfing lessons.",
         "type": "direct",
         "source": "PerksPlus.pdf, p. 3"
     },
     {
         "question": "Which prescription drugs does Northwind Standard cover?",
-        "answer": "Northwind Standard only covers generic and brand-name drugs; unlike Northwind Health Plus, it does not cover specialty drugs.",
+        "answer": "Northwind Standard covers generic and brand-name drugs; unlike Northwind Health Plus, it does not cover specialty drugs.",
         "type": "direct",
-        "source": "Benefit_Options.pdf, p. 3"
+        "source": "Benefit_Options.pdf, p. 3; Northwind_Standard_Benefits_Details.pdf, Prescription Drugs section"
     },
     {
         "question": "How often are performance reviews held and what do they include?",

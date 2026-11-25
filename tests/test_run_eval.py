@@ -4,8 +4,13 @@ Quality gate de la última evaluación (python app/run_eval.py):
 
 1. Umbrales mínimos de los jueces de MLflow.
 2. Sin regresiones contra la línea base (MLflow 3.18): si la evaluación se
-   ejecutó con --baseline, ningún juez puede empeorar de forma estadísticamente
-   significativa (compare_evaluations, prueba pareada por pregunta).
+   ejecutó con --baseline,
+   a. ningún juez puede empeorar de forma estadísticamente significativa
+      (compare_evaluations, prueba pareada por pregunta), y
+   b. ninguna pregunta puede empeorar en los jueces "guardianes" (GATE_GUARD,
+      por defecto correctness). Con datasets pequeños la prueba estadística no
+      alcanza a detectar caídas grandes: con 10 preguntas, 4 respuestas que pasan
+      de correctas a incorrectas dan p = 0.125. Por eso se revisa fila por fila.
 """
 
 import json
@@ -17,6 +22,9 @@ import pytest
 EVAL_EXPERIMENT = "rag_evaluation"
 COMPARISON_PATH = ".eval_comparison.json"
 ALPHA = float(os.getenv("GATE_ALPHA", 0.05))
+# Jueces en los que ninguna pregunta puede empeorar (vacío = desactivado)
+GUARD_SCORERS = [s for s in os.getenv("GATE_GUARD", "correctness").split(",") if s]
+MAX_REGRESSED_ROWS = int(os.getenv("GATE_MAX_REGRESSED_ROWS", 0))
 
 # Umbrales mínimos (promedio 0..1 de cada juez). Ajusta según tu caso.
 THRESHOLDS = {
@@ -66,3 +74,30 @@ def test_sin_regresion_vs_linea_base(comparison):
         "Regresiones significativas frente a la línea base: "
         + ", ".join(f"{r.scorer} ({r.baseline_mean:.2f} → {r.candidate_mean:.2f}, p={r.p_value:.3f})"
                     for r in regresiones.itertuples()))
+
+
+def _question(trace_id: str) -> str:
+    try:
+        inputs = mlflow.get_trace(trace_id).data.spans[0].inputs or {}
+        return str(inputs.get("question") or inputs)
+    except Exception:
+        return trace_id
+
+
+@pytest.mark.parametrize("scorer_name", GUARD_SCORERS)
+def test_sin_preguntas_peores(comparison, scorer_name):
+    """Ninguna pregunta empeora en los jueces guardianes, aunque el promedio no lo muestre."""
+    if scorer_name not in comparison.scorers:
+        pytest.skip(f"La comparación no incluye el juez '{scorer_name}'")
+    peores = [
+        (row, sc) for row in comparison.paired_rows
+        for name, sc in row["scores"].items()
+        if name == scorer_name and sc["delta"] < 0
+    ]
+    for row, sc in peores:
+        print(f"{sc['baseline']} → {sc['candidate']} | {_question(row['candidate_trace_id'])}")
+    assert len(peores) <= MAX_REGRESSED_ROWS, (
+        f"{len(peores)} preguntas empeoraron en '{scorer_name}' frente a la línea base "
+        f"(máximo permitido: {MAX_REGRESSED_ROWS}):\n"
+        + "\n".join(f"  {sc['baseline']} → {sc['candidate']} | "
+                     f"{_question(row['candidate_trace_id'])}" for row, sc in peores))
