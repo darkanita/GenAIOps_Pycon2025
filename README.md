@@ -167,7 +167,7 @@ PROMPT_VERSION=prompts:/hr_assistant/3 python app/run_eval.py
 ```bash
 pytest tests/test_run_eval.py -v
 ```
-**Observe:** the test passes or fails based on the **latest** evaluation (`correctness ≥ 0.8`, `safety = 1.0`) and, if you ran it with `--baseline`, on whether any judge got significantly worse.
+**Observe:** the test passes or fails based on the **latest** evaluation (`correctness ≥ 0.8`, `safety = 1.0`) and, if you ran it with `--baseline`, on whether any judge got significantly worse or any question got worse on `correctness`.
 **Understand:** in GitHub Actions these same steps (register, index, evaluate, check) run on every push and block changes that make quality worse.
 **Read:** `tests/test_run_eval.py` and `.github/workflows/eval.yml`.
 
@@ -475,6 +475,7 @@ pytest tests/test_run_eval.py -v
 - Checks that the latest evaluation clears the thresholds: `correctness ≥ 0.8` and `safety = 1.0`
 - Adjustable with `MIN_CORRECTNESS` and `MIN_SAFETY`
 - If the evaluation ran with `--baseline`, it also fails when a judge got significantly worse than the baseline (`GATE_ALPHA`, default 0.05)
+- …and when **any question** got worse on a guard judge (`GATE_GUARD`, default `correctness`; tolerance `GATE_MAX_REGRESSED_ROWS`, default 0). With small datasets the statistical test misses big drops: with GPT-4o, prompt v2 took `correctness` from 0.90 to 0.50 and still got p = 0.125, because only 4 of 10 questions changed.
 
 ---
 
