@@ -79,10 +79,10 @@ CORPUS = [
     },
     {
         "doc": "PerksPlus.pdf", "page": 3,
-        "es": "PerksPlus permite reembolsar hasta 1000 dólares al año en actividades de "
+        "es": "PerksPlus permite reembolsar hasta 1000 dólares en actividades de "
               "bienestar físico. Incluye membresías de gimnasio, entrenamiento personal, clases "
               "de yoga o pilates, equipo deportivo y clases grupales.",
-        "en": "PerksPlus reimburses up to 1000 dollars a year for physical wellness activities. "
+        "en": "PerksPlus reimburses up to 1000 dollars for physical wellness activities. "
               "It includes gym memberships, personal training, yoga or Pilates classes, fitness "
               "equipment and group classes.",
         "topics": "perksplus incluye include programa program monto amount maximo maximum "

@@ -1,33 +1,34 @@
 [
     {
         "question": "¿Qué cubre el plan de beneficios Northwind Health Plus?",
-        "answer": "Northwind Health Plus cubre servicios médicos, de visión y dentales; medicamentos recetados (genéricos, de marca y especializados); salud mental y abuso de sustancias; atención preventiva; y servicios de emergencia, tanto dentro como fuera de la red.",
+        "answer": "Northwind Health Plus cubre servicios médicos, de visión y dentales; medicamentos recetados; salud mental y abuso de sustancias; atención preventiva; y servicios de emergencia, tanto dentro como fuera de la red.",
         "type": "directa",
         "source": "Benefit_Options.pdf, p. 3"
     },
     {
         "question": "¿Qué incluye el programa PerksPlus?",
-        "answer": "PerksPlus permite reembolsar hasta 1000 dólares en actividades de bienestar físico, como membresías de gimnasio, entrenamiento personal, clases de yoga o pilates, equipo deportivo y clases grupales. No cubre gastos no relacionados con actividad física, tratamientos médicos, ni comida o suplementos.",
+        "answer": "PerksPlus permite reembolsar hasta 1000 dólares en programas relacionados con la actividad física, por ejemplo membresías de gimnasio, entrenamiento personal, clases de yoga o pilates, equipo deportivo, clases grupales y lecciones como esquí, buceo, surf o equitación.",
         "type": "directa",
-        "source": "PerksPlus.pdf, pp. 3-4"
+        "source": "PerksPlus.pdf, p. 3"
     },
     {
         "question": "¿Qué no cubre el plan Northwind Standard en comparación con Northwind Health Plus?",
-        "answer": "A diferencia de Northwind Health Plus, Northwind Standard no cubre servicios de emergencia, salud mental y abuso de sustancias, ni servicios fuera de la red; además, en medicamentos solo cubre genéricos y de marca, no los especializados.",
+        "answer": "Northwind Standard no cubre servicios de emergencia, salud mental y abuso de sustancias, ni servicios fuera de la red. Además cubre menos que Health Plus en medicamentos (solo genéricos y de marca, no especializados), en visión (solo exámenes y anteojos, no lentes de contacto) y en servicios médicos (solo consultas y exámenes de laboratorio, no hospitalizaciones ni rayos X).",
         "type": "multi-documento",
-        "source": "Benefit_Options.pdf, p. 3"
+        "source": "Benefit_Options.pdf, p. 3",
+        "note": "Northwind_Standard_Benefits_Details.pdf (pp. 39-40) contradice en parte este punto: dice que Standard sí cubre salud mental, pero no abuso de sustancias. Si el retriever trae esa página, el bot puede responder distinto sin estar inventando."
     },
     {
         "question": "¿Cuál es el procedimiento para tomar una licencia por maternidad?",
-        "answer": "Los documentos no contienen información sobre el procedimiento para solicitar una licencia por maternidad, por lo que el asistente debe indicar que no tiene información suficiente para responder.",
+        "answer": "Los documentos no describen un procedimiento para solicitar licencia de maternidad, así que el asistente debe decir que no tiene esa información. Puede aclarar que los planes Northwind Health Plus y Northwind Standard cubren la atención médica de maternidad (prenatal, parto y posparto), que no es lo mismo que la licencia.",
         "type": "sin respuesta",
-        "source": "No aparece en ningún documento"
+        "source": "Ningún documento describe la licencia; la atención de maternidad está en Northwind_Health_Plus_Benefits_Details.pdf y Northwind_Standard_Benefits_Details.pdf"
     },
     {
         "question": "¿Qué responsabilidades tiene un analista de datos según el role library?",
         "answer": "El role library no incluye el rol de analista de datos, por lo que el asistente debe indicar que no tiene información sobre ese rol.",
         "type": "sin respuesta",
-        "source": "role_library.pdf no contiene ese rol"
+        "source": "role_library.pdf solo describe cargos directivos, de gerencia y de ventas; no incluye analista de datos"
     },
     {
         "question": "¿Cuál es el monto máximo que reembolsa PerksPlus?",
@@ -37,15 +38,15 @@
     },
     {
         "question": "¿PerksPlus cubre clases de surf?",
-        "answer": "Sí. PerksPlus cubre lecciones de surf, así como de esquí y snowboard, buceo y equitación.",
+        "answer": "Sí. PerksPlus cubre lecciones de surf.",
         "type": "directa",
         "source": "PerksPlus.pdf, p. 3"
     },
     {
         "question": "¿Qué medicamentos cubre Northwind Standard?",
-        "answer": "Northwind Standard solo cubre medicamentos genéricos y de marca; a diferencia de Northwind Health Plus, no cubre medicamentos especializados.",
+        "answer": "Northwind Standard cubre medicamentos genéricos y de marca; a diferencia de Northwind Health Plus, no cubre medicamentos especializados.",
         "type": "directa",
-        "source": "Benefit_Options.pdf, p. 3"
+        "source": "Benefit_Options.pdf, p. 3; Northwind_Standard_Benefits_Details.pdf, sección Prescription Drugs"
     },
     {
         "question": "¿Con qué frecuencia se realizan las evaluaciones de desempeño y qué incluyen?",

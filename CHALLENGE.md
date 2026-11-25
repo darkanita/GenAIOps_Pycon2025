@@ -70,6 +70,8 @@ python -m app.prompt_registry
 
 With 10 easy questions the metrics say little. Create **at least 15 questions** in `tests/eval_dataset.en.json` (or `tests/eval_dataset.json` in Spanish), covering these types:
 
+> ⚠️ Write each expected answer **from the PDF**, not from an LLM, and state only what the question asks. Record where it comes from in `source` (file and page). If two documents contradict each other, explain it in `note`. A wrong or over-specified expected answer makes the judge fail correct answers.
+
 | Type | Minimum | What it measures | Example (health domain) |
 |---|---|---|---|
 | **Direct** | 6 | The answer is in a single chunk | "What are the vaccination hours?" |

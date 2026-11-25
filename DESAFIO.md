@@ -70,6 +70,8 @@ python -m app.prompt_registry
 
 Con 10 preguntas fáciles las métricas dicen poco. Crea **al menos 15 preguntas** en `tests/eval_dataset.json`, que cubran estos tipos:
 
+> ⚠️ Escribe cada respuesta esperada **a partir del PDF**, no de un LLM, y di solo lo que pregunta la pregunta. Anota de dónde sale en `source` (archivo y página). Si dos documentos se contradicen, explícalo en `note`. Una respuesta esperada incorrecta o con datos de más hace que el juez repruebe respuestas correctas.
+
 | Tipo | Mínimo | Qué mide | Ejemplo (dominio salud) |
 |---|---|---|---|
 | **Directa** | 6 | La respuesta está en un solo fragmento | "¿Cuál es el horario de vacunación?" |
