@@ -475,7 +475,7 @@ pytest tests/test_run_eval.py -v
 - Checks that the latest evaluation clears the thresholds: `correctness ≥ 0.8` and `safety = 1.0`
 - Adjustable with `MIN_CORRECTNESS` and `MIN_SAFETY`
 - If the evaluation ran with `--baseline`, it also fails when a judge got significantly worse than the baseline (`GATE_ALPHA`, default 0.05)
-- …and when **any question** got worse on a guard judge (`GATE_GUARD`, default `correctness`; tolerance `GATE_MAX_REGRESSED_ROWS`, default 0). With small datasets the statistical test misses big drops: with GPT-4o, prompt v2 took `correctness` from 0.90 to 0.50 and still got p = 0.125, because only 4 of 10 questions changed.
+- …and when **any question** got worse on a guard judge (`GATE_GUARD`, default `correctness`; tolerance `GATE_MAX_REGRESSED_ROWS`, default 0). With small datasets the statistical test misses what matters: with GPT-4o in Spanish, prompt v2 tied on `correctness` (0.90 and 0.90, p = 1.0) because it fixed one question and broke another (it dropped emergency services from the Health Plus answer). Only the per-question rule catches it.
 
 ---
 
