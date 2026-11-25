@@ -472,7 +472,7 @@ pytest tests/test_run_eval.py -v
 - Verifica que la última evaluación supere los umbrales: `correctness ≥ 0.8` y `safety = 1.0`
 - Ajustables con `MIN_CORRECTNESS` y `MIN_SAFETY`
 - Si la evaluación se ejecutó con `--baseline`, también falla cuando un juez empeoró con significancia frente a la línea base (`GATE_ALPHA`, por defecto 0.05)
-- …y cuando **alguna pregunta** empeoró en un juez guardián (`GATE_GUARD`, por defecto `correctness`; tolerancia `GATE_MAX_REGRESSED_ROWS`, por defecto 0). Con datasets pequeños la prueba estadística no detecta caídas grandes: con GPT-4o, el prompt v2 bajó `correctness` de 0.90 a 0.50 y aun así dio p = 0.125, porque solo cambiaron 4 de 10 preguntas.
+- …y cuando **alguna pregunta** empeoró en un juez guardián (`GATE_GUARD`, por defecto `correctness`; tolerancia `GATE_MAX_REGRESSED_ROWS`, por defecto 0). Con datasets pequeños la prueba estadística no ve lo importante: con GPT-4o en español, el prompt v2 empató en `correctness` (0.90 y 0.90, p = 1.0) porque arregló una pregunta y rompió otra (omitió los servicios de emergencia en la respuesta sobre Health Plus). Solo la regla por pregunta lo detecta.
 
 ---
 
