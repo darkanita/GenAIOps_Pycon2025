@@ -44,7 +44,7 @@
     },
     {
         "question": "Which prescription drugs does Northwind Standard cover?",
-        "answer": "Northwind Standard covers generic and brand-name drugs; unlike Northwind Health Plus, it does not cover specialty drugs.",
+        "answer": "Northwind Standard covers generic and brand-name prescription drugs.",
         "type": "direct",
         "source": "Benefit_Options.pdf, p. 3; Northwind_Standard_Benefits_Details.pdf, Prescription Drugs section"
     },

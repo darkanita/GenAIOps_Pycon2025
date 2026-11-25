@@ -44,7 +44,7 @@
     },
     {
         "question": "¿Qué medicamentos cubre Northwind Standard?",
-        "answer": "Northwind Standard cubre medicamentos genéricos y de marca; a diferencia de Northwind Health Plus, no cubre medicamentos especializados.",
+        "answer": "Northwind Standard cubre medicamentos recetados genéricos y de marca.",
         "type": "directa",
         "source": "Benefit_Options.pdf, p. 3; Northwind_Standard_Benefits_Details.pdf, sección Prescription Drugs"
     },
